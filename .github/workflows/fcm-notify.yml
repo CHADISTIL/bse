@@ -2,7 +2,7 @@ name: BC Electric — FCM Notifications
 
 on:
   schedule:
-    - cron: '* * * * *'
+    - cron: '*/5 * * * *' # تم تعديلها إلى كل 5 دقائق لأن جيتهاب سيتجاهل الدقيقة الواحدة ويؤخرها تلقائياً
   workflow_dispatch:
 
 jobs:
@@ -111,7 +111,6 @@ jobs:
                   sentCount++;
                 } catch(e) {
                   console.warn(`❌ FCM error: ${e.message}`);
-                  // إذا انتهت صلاحية التوكن احذفه
                   if (e.code === 'messaging/registration-token-not-registered') {
                     const uid = Object.keys(fcmTokens).find(k => fcmTokens[k].token === token);
                     if (uid) await db.ref(`fcm_tokens/${uid}`).remove();
