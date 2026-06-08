@@ -3513,6 +3513,12 @@ function checkAndShowMonthlyAdminPopup() {
     document.body.appendChild(m);
 }
 
+
+// ─── Trigger FCM Worker immediately after any notification push ───
+function triggerFCM() {
+  fetch("https://bc-electric-notifications.jawrab.workers.dev/", { method: "GET", mode: "no-cors" }).catch(() => {});
+}
+
 window.grantMonthlyBonus = function(empId) {
     const amt = parseFloat(document.getElementById('adminMonthlyBonusAmt')?.value || 0);
     const reason = document.getElementById('adminMonthlyBonusReason')?.value || t('admin_monthly_bonus_default_reason') || 'مكافأة المركز الأول';
@@ -3531,6 +3537,7 @@ window.grantMonthlyBonus = function(empId) {
             timestamp: Date.now(),
             reason, date:today, time:new Date().toLocaleTimeString('en-GB'), read:false, timestamp:Date.now(), forEmployee:true
         });
+        triggerFCM();
         showToast(t('bonus_granted_success')||'تم منح المكافأة', 'success');
         closeAdminMonthlyPopup(true);
     });
@@ -3599,6 +3606,7 @@ function closeMonthlyAccount(empId, amount) {
             month: m, amount: amount || 0, remainingDebt: d.remaining,
             date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true
         });
+        triggerFCM();
         showToast(t('alert_month_closed',{month:m}), 'purple', t('alert_month_closed_title'));
         if (currentEmpId == empId) renderDirectHistory();
         if (isAdmin) renderUI();
@@ -4017,6 +4025,7 @@ window.saveSpecialSharesEdit = function(empId, date) {
                 newAmount:newShares[w.id], forEmployee:true, forAdmin:false, read:false, timestamp:Date.now(),
                 time: new Date().toLocaleTimeString('en-GB')
             });
+            triggerFCM();
         });
         closeModal('editAttendanceModal');
         if (isAdmin) renderUI();
@@ -4045,6 +4054,7 @@ function saveAttendanceEdit(empId, date) {
     database.ref(`employees/${empId}/attendance/${date}`).update(data).then(() => {
         updateEmployeePoints(empId);
         database.ref('notifications').push({ type: 'attendance_edited', employeeId: empId, employeeName: emp?.name, date, ratingNote: note, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
+        triggerFCM();
         showToast(t('alert_attendance_edited',{ratingNote:note}), 'success', t('alert_attendance_edited_title'));
         closeModal('editAttendanceModal');
         if (currentEmpId == empId) { renderDirectHistory(); updateEmployeeProfile(); }
@@ -4058,6 +4068,7 @@ function deleteAttendanceRecord(empId, date) {
         updateEmployeePoints(empId);
         const emp = employees.find(e => e.id == empId);
         database.ref('notifications').push({ type: 'attendance_deleted', employeeId: empId, employeeName: emp?.name, date, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
+        triggerFCM();
         showToast(t('alert_record_deleted'), 'danger', t('alert_record_deleted_title'));
         closeModal('editAttendanceModal');
         if (currentEmpId == empId) renderDirectHistory();
@@ -4090,6 +4101,7 @@ function savePaymentEdit(empId, pid) {
     database.ref(`employees/${empId}/attendance/${pid}`).update({ amount: amt, pay: amt, date: d, originalDate: d, notes: note, edited: true, editDate: today }).then(() => {
         const emp = employees.find(e => e.id == empId);
         database.ref('notifications').push({ type: 'payment_edited', employeeId: empId, employeeName: emp?.name, amount: amt, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
+        triggerFCM();
         showToast(t('alert_payment_edited'), 'success', t('alert_payment_recorded_title'));
         closeModal('editAttendanceModal');
         if (currentEmpId == empId) renderDirectHistory();
@@ -4102,6 +4114,7 @@ function deletePayment(empId, pid) {
     database.ref(`employees/${empId}/attendance/${pid}`).remove().then(() => {
         const emp = employees.find(e => e.id == empId);
         database.ref('notifications').push({ type: 'payment_deleted', employeeId: empId, employeeName: emp?.name, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
+        triggerFCM();
         showToast(t('alert_payment_deleted'), 'danger', t('alert_record_deleted_title'));
         closeModal('editAttendanceModal');
         if (currentEmpId == empId) renderDirectHistory();
@@ -4549,6 +4562,7 @@ function addAttendance(id) {
                                 read: false, timestamp: Date.now(),
                                 time: new Date().toLocaleTimeString('en-GB')
                             });
+                            triggerFCM();
                         })
                         .catch(err => console.error(`Error saving for worker ${w.id}:`, err));
                 });
@@ -4563,6 +4577,7 @@ function addAttendance(id) {
             if (pDiv) pDiv.innerHTML = '';
         }
         database.ref('notifications').push({ type: 'attendance_recorded', employeeId: id, employeeName: emp.name, status, overtime: ot, expense: ex, ratingNote: note, date, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
+        triggerFCM();
         showToast(t('alert_attendance_saved',{date,ratingNote:note}), 'success', t('alert_attendance_saved_title'));
         ['ot', 'exp', 'rating'].forEach(f => { const el = document.getElementById(`${f}-${id}`); if (el) el.value = '0'; });
         const specRate = document.getElementById(`specRate-${id}`); if (specRate) specRate.value = '';
@@ -4645,6 +4660,7 @@ function saveAttEditFromAdmin() {
     database.ref(`employees/${currentEmpId}/attendance/${date}`).set(data).then(() => {
         updateEmployeePoints(currentEmpId);
         database.ref('notifications').push({ type: 'attendance_edited', employeeId: currentEmpId, employeeName: emp?.name, date, ratingNote: note, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
+        triggerFCM();
         showToast(t('alert_attendance_edited',{ratingNote:note}), 'success', t('alert_attendance_edited_title'));
         closeModal('editAttendanceModal');
         renderUI();
@@ -4713,6 +4729,7 @@ function recordFullPayment(empId, amount) {
                     amount: total, date: today, time: new Date().toLocaleTimeString('en-GB'),
                     read: false, timestamp: Date.now(), forEmployee: true
                 });
+                triggerFCM();
                 showToast(`${t('payment_recorded')} ${total} ${t('amount')}`, 'success', t('alert_payment_recorded_title'));
                 
                 // السؤال عن إقفال الشهر
@@ -4770,6 +4787,7 @@ window.submitPartialPayment = function(empId) {
             amount: amt, date: today, time: new Date().toLocaleTimeString('en-GB'),
             read: false, timestamp: Date.now(), forEmployee: true
         });
+        triggerFCM();
         showToast(t('alert_partial_payment_recorded'), 'success', t('alert_payment_recorded_title'));
         closeAppDialog();
         document.querySelector('.modal')?.remove();
@@ -4821,6 +4839,7 @@ function grantBonus(empId) {
         notes: `${t('bonus')}: ${reason}`, isPayment: true, isBonus: true, editable: true
     }).then(() => {
         database.ref('notifications').push({ type: 'bonus_granted', employeeId: empId, employeeName: emp.name, amount: amt, reason, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
+        triggerFCM();
         showToast(t('bonus_granted_success'), 'purple', t('alert_bonus_granted_title'));
         closeModal('bonusAdminModal');
         renderUI();
@@ -5252,6 +5271,7 @@ function showRequestsSummary() {
 window.approveReq = function(eid, rid) {
     database.ref(`employees/${eid}/requests/${rid}`).update({ status: 'approved', notified: false }).then(() => {
         database.ref('notifications').push({ type: 'request_response', employeeId: eid, status: 'approved', date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
+        triggerFCM();
         showToast(t('alert_request_approved'), 'success'); updateNotificationBadge();
     });
 };
@@ -5259,6 +5279,7 @@ window.rejectReq = function(eid, rid) {
     showAppDialog({icon:'<i class="fas fa-times-circle" style="color:white;"></i>',iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',title:t('reject'),msg:t('enter_rejection_reason'),type:'prompt',placeholder:'...',confirmClass:'btn-danger',confirmText:`<i class="fas fa-times"></i> ${t('reject')}`,onConfirm:(reason)=>{
     database.ref(`employees/${eid}/requests/${rid}`).update({ status: 'rejected', notified: false, rejectReason: reason||'' }).then(() => {
         database.ref('notifications').push({ type: 'request_response', employeeId: eid, status: 'rejected', rejectReason: reason||'', date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
+        triggerFCM();
         showToast(t('alert_request_rejected'), 'warning'); updateNotificationBadge();
     });
     }});
@@ -5308,6 +5329,7 @@ function submitRequest() {
     if (!val && type !== 'زيادة_اجر') { showToast(t('alert_enter_value'), 'warning'); return; }
     database.ref(`employees/${currentEmpId}/requests`).push({ type, val, note, date: today, status: 'pending', notified: false }).then(() => {
         database.ref('notifications').push({ type: 'new_request', employeeId: currentEmpId, employeeName: currentEmpData.name, requestType: type, requestVal: val, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forAdmin: true });
+        triggerFCM();
         showToast(t('alert_request_sent'), 'success', t('alert_request_sent_title'));
         closeModal('requestModal');
     });
@@ -5493,6 +5515,7 @@ function checkPendingShareApprovals() {
             showShareApprovalBanner(date, r);
         }
     });
+        triggerFCM();
 }
 
 function showShareApprovalBanner(date, r) {
@@ -5731,6 +5754,7 @@ window.submitProposalShare = function(date, total, workers, ownerId, otherTotal)
                 forEmployee: true, forAdmin: false, read: false, timestamp: Date.now(),
                 time: new Date().toLocaleTimeString('en-GB')
             });
+            triggerFCM();
         });
     });
 };
@@ -5861,6 +5885,7 @@ function initShares(ownerId, date, totalAmount, workers, customShares) {
                 forEmployee: true, forAdmin: false, read: false, timestamp: Date.now(),
                 time: new Date().toLocaleTimeString('en-GB')
             });
+            triggerFCM();
         });
     });
 }
@@ -6256,6 +6281,7 @@ window.respondToProposal = function(ownerId, date, response) {
                             forEmployee:true, forAdmin:false, read:false, timestamp:Date.now(),
                             time: new Date().toLocaleTimeString('en-GB')
                         });
+                        triggerFCM();
                     });
                 });
             };
@@ -6291,6 +6317,7 @@ window.respondToProposal = function(ownerId, date, response) {
                         date, ownerId, forEmployee:true, forAdmin:false, read:false, timestamp:Date.now(),
                         time: new Date().toLocaleTimeString('en-GB')
                     });
+                    triggerFCM();
                 }
             });
         }
@@ -6513,6 +6540,7 @@ window.submitProposeShare = function(ownerId, date, total, workers) {
             forEmployee:true, forAdmin:false, read:false, timestamp:Date.now(),
             time: new Date().toLocaleTimeString('en-GB')
         });
+        triggerFCM();
     });
     database.ref().update(updates).then(() => {
         document.getElementById('proposeShareModal')?.remove();
@@ -6567,6 +6595,7 @@ window.saveAdminShareEdit = function(ownerId, date, total, workers) {
                 newAmount:newShares[w.id], forEmployee:true, forAdmin:false, read:false, timestamp:Date.now(),
                 time: new Date().toLocaleTimeString('en-GB')
             });
+            triggerFCM();
         });
     });
 };
