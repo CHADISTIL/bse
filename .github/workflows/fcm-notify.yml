@@ -9,230 +9,122 @@ jobs:
   send-notifications:
     runs-on: ubuntu-latest
     steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install firebase-admin
+        run: npm install firebase-admin
+
       - name: Send FCM Notifications
         env:
           FIREBASE_PROJECT_ID: faddi-410e9
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           node << 'EOF'
-          const https = require('https');
-          const crypto = require('crypto');
+          const admin = require('firebase-admin');
 
           const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
           const projectId = process.env.FIREBASE_PROJECT_ID;
 
-          function base64url(str) {
-            return Buffer.from(str).toString('base64')
-              .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-          }
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            databaseURL: `https://${projectId}-default-rtdb.firebaseio.com`
+          });
 
-          function makeJWT() {
-            const now = Math.floor(Date.now() / 1000);
-            const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-            const payload = base64url(JSON.stringify({
-              iss: serviceAccount.client_email,
-              sub: serviceAccount.client_email,
-              aud: 'https://oauth2.googleapis.com/token',
-              iat: now, exp: now + 3600,
-              scope: 'https://www.googleapis.com/auth/firebase.messaging https://www.googleapis.com/auth/firebase.database'
-            }));
-            const sign = crypto.createSign('RSA-SHA256');
-            sign.update(`${header}.${payload}`);
-            const sig = sign.sign(serviceAccount.private_key, 'base64')
-              .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-            return `${header}.${payload}.${sig}`;
-          }
+          const db = admin.database();
+          const messaging = admin.messaging();
 
-          function getAccessToken() {
-            return new Promise((resolve, reject) => {
-              const jwt = makeJWT();
-              const body = `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`;
-              const req = https.request({
-                hostname: 'oauth2.googleapis.com', path: '/token', method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-              }, res => {
-                let data = '';
-                res.on('data', d => data += d);
-                res.on('end', () => {
-                  const json = JSON.parse(data);
-                  json.access_token ? resolve(json.access_token) : reject(new Error(data));
-                });
-              });
-              req.on('error', reject);
-              req.write(body); req.end();
-            });
-          }
-
-          function dbGet(path, token) {
-            return new Promise((resolve, reject) => {
-              const url = `https://${projectId}-default-rtdb.firebaseio.com/${path}.json`;
-              console.log(`[DB] GET ${url.split('?')[0]}`);
-              const req = https.request({
-                hostname: `${projectId}-default-rtdb.firebaseio.com`,
-                path: `/${path}.json?access_token=${token}`,
-                method: 'GET'
-              }, res => {
-                let data = '';
-                res.on('data', d => data += d);
-                res.on('end', () => {
-                  console.log(`[DB] Response ${res.statusCode}: ${data.slice(0,100)}`);
-                  try { resolve(JSON.parse(data)); } catch(e) { resolve(null); }
-                });
-              });
-              req.on('error', e => { console.error('[DB] Error:', e.message); reject(e); });
-              req.end();
-            });
-          }
-
-          function dbSet(path, value, token) {
-            return new Promise((resolve, reject) => {
-              const body = JSON.stringify(value);
-              const req = https.request({
-                hostname: `${projectId}-default-rtdb.firebaseio.com`,
-                path: `/${path}.json?access_token=${token}`,
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-              }, res => {
-                let data = '';
-                res.on('data', d => data += d);
-                res.on('end', () => resolve());
-              });
-              req.on('error', reject); req.write(body); req.end();
-            });
-          }
-
-          function sendFCM(token, title, body, tag, accessToken) {
-            return new Promise((resolve, reject) => {
-              const message = JSON.stringify({
-                message: {
-                  token,
-                  notification: { title, body },
-                  data: { tag: tag || 'bc-notif' },
-                  android: { priority: 'high', notification: { sound: 'default' } },
-                  apns: { payload: { aps: { sound: 'default', badge: 1 } } },
-                  webpush: {
-                    headers: { Urgency: 'high' },
-                    notification: { icon: '/bse/icon-192.png', dir: 'rtl' }
-                  }
-                }
-              });
-              const req = https.request({
-                hostname: 'fcm.googleapis.com',
-                path: `/v1/projects/${projectId}/messages:send`,
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${accessToken}`,
-                  'Content-Type': 'application/json',
-                  'Content-Length': Buffer.byteLength(message)
-                }
-              }, res => {
-                let data = '';
-                res.on('data', d => data += d);
-                res.on('end', () => {
-                  console.log(`[FCM] Status: ${res.statusCode} | ${data}`);
-                  resolve(JSON.parse(data));
-                });
-              });
-              req.on('error', reject); req.write(message); req.end();
-            });
-          }
+          const titles = {
+            attendance_recorded: '✅ تم تسجيل الحضور',
+            attendance_edited:   '✏️ تعديل سجل الحضور',
+            attendance_deleted:  '🗑️ حذف سجل الحضور',
+            payment_recorded:    '💰 دفعة جديدة',
+            bonus_granted:       '🎁 مكافأة جديدة',
+            new_message:         '💬 رسالة جديدة',
+            new_request:         '📋 طلب جديد',
+            request_response:    '📩 رد على طلبك',
+            special_work_added:  '⭐ عمل خاص',
+            share_settled:       '🤝 توزيع الحصص',
+            negative_points_warning: '⚠️ تحذير نقاط',
+          };
 
           async function main() {
             console.log('BC Electric FCM Worker started...');
-            console.log('Project:', projectId);
-            console.log('Time now:', new Date().toISOString());
 
-            const accessToken = await getAccessToken();
-            console.log('Access token obtained ✅');
+            const [notifsSnap, tokensSnap] = await Promise.all([
+              db.ref('notifications').once('value'),
+              db.ref('fcm_tokens').once('value')
+            ]);
 
-            const notifications = await dbGet('notifications', accessToken);
-            console.log('Notifications type:', typeof notifications);
-            console.log('Notifications null?', notifications === null);
+            const notifications = notifsSnap.val();
+            const fcmTokens = tokensSnap.val();
 
-            if (!notifications) { console.log('No notifications in DB'); return; }
+            if (!notifications) { console.log('No notifications'); process.exit(0); }
+            if (!fcmTokens) { console.log('No FCM tokens'); process.exit(0); }
 
-            const keys = Object.keys(notifications);
-            console.log(`Total notifications: ${keys.length}`);
-            console.log('First key:', keys[0]);
-            console.log('First notif:', JSON.stringify(notifications[keys[0]]));
-
-            const fcmTokens = await dbGet('fcm_tokens', accessToken);
-            console.log('FCM tokens:', fcmTokens ? Object.keys(fcmTokens) : 'null');
-
-            if (!fcmTokens) { console.log('No FCM tokens!'); return; }
-
-            const now = Date.now();
-            console.log('Now ms:', now);
-
-            const titles = {
-              attendance_recorded: '✅ تم تسجيل الحضور',
-              attendance_edited:   '✏️ تعديل سجل الحضور',
-              attendance_deleted:  '🗑️ حذف سجل الحضور',
-              payment_recorded:    '💰 دفعة جديدة',
-              bonus_granted:       '🎁 مكافأة جديدة',
-              new_message:         '💬 رسالة جديدة',
-              new_request:         '📋 طلب جديد',
-              request_response:    '📩 رد على طلبك',
-              special_work_added:  '⭐ عمل خاص',
-              share_settled:       '🤝 توزيع الحصص',
-              negative_points_warning: '⚠️ تحذير نقاط',
-            };
+            console.log(`Notifications: ${Object.keys(notifications).length}`);
+            console.log(`FCM tokens: ${Object.keys(fcmTokens).join(', ')}`);
 
             let sentCount = 0;
 
             for (const [notifId, notif] of Object.entries(notifications)) {
-              console.log(`\n--- ${notifId} ---`);
-              console.log('fcm_sent:', notif.fcm_sent);
-              console.log('timestamp:', notif.timestamp);
-              console.log('type:', notif.type);
-              console.log('forEmployee:', notif.forEmployee);
-              console.log('forAdmin:', notif.forAdmin);
-              console.log('employeeId:', notif.employeeId);
+              if (notif.fcm_sent) continue;
 
-              if (notif.fcm_sent) { console.log('SKIP: already sent'); continue; }
-
-              let notifTime = notif.timestamp || null;
-              if (notifTime && notifTime < 1e12) notifTime *= 1000;
-
-              const age = notifTime ? now - notifTime : 0;
-              console.log('Age (seconds):', Math.round(age/1000));
-
-              // أرسل أي إشعار غير مرسل بغض النظر عن الوقت
               const title = titles[notif.type] || 'BC Electric';
-              const body = notif.message || notif.employeeName || notif.type || '';
-
+              const body = notif.message || notif.employeeName || '';
               const recipients = [];
+
               if (notif.forAdmin) {
-                for (const [uid, data] of Object.entries(fcmTokens)) {
-                  if (data.role === 'admin' && data.token) recipients.push({ token: data.token, uid });
+                for (const [uid, d] of Object.entries(fcmTokens)) {
+                  if (d.role === 'admin' && d.token) recipients.push(d.token);
                 }
               }
+
               if (notif.forEmployee && notif.employeeId) {
                 const empId = String(notif.employeeId);
                 const empToken = fcmTokens[empId];
-                if (empToken && empToken.token) {
-                  recipients.push({ token: empToken.token, uid: empId });
+                if (empToken?.token) {
+                  recipients.push(empToken.token);
                 } else {
-                  console.log(`No token for empId: ${empId}`);
-                  console.log('Available uids:', Object.keys(fcmTokens));
+                  console.log(`No token for employee ${empId}. Available: ${Object.keys(fcmTokens).join(', ')}`);
                 }
               }
 
-              console.log('Recipients count:', recipients.length);
+              console.log(`[${notif.type}] → ${recipients.length} recipients`);
 
-              for (const { token, uid } of recipients) {
+              for (const token of recipients) {
                 try {
-                  await sendFCM(token, title, body, notif.type, accessToken);
+                  await messaging.send({
+                    token,
+                    notification: { title, body },
+                    data: { tag: notif.type || 'bc-notif' },
+                    android: { priority: 'high', notification: { sound: 'default', channelId: 'bc_electric' } },
+                    apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+                    webpush: {
+                      headers: { Urgency: 'high' },
+                      notification: { icon: '/bse/icon-192.png', dir: 'rtl', vibrate: [200,100,200] }
+                    }
+                  });
+                  console.log(`✅ Sent: ${title}`);
                   sentCount++;
                 } catch(e) {
-                  console.warn('FCM error:', e.message);
+                  console.warn(`❌ FCM error: ${e.message}`);
+                  // إذا انتهت صلاحية التوكن احذفه
+                  if (e.code === 'messaging/registration-token-not-registered') {
+                    const uid = Object.keys(fcmTokens).find(k => fcmTokens[k].token === token);
+                    if (uid) await db.ref(`fcm_tokens/${uid}`).remove();
+                    console.log(`Removed invalid token for uid: ${uid}`);
+                  }
                 }
               }
 
-              await dbSet(`notifications/${notifId}/fcm_sent`, true, accessToken);
+              await db.ref(`notifications/${notifId}/fcm_sent`).set(true);
             }
 
-            console.log(`\n✅ Done. Sent ${sentCount} notifications.`);
+            console.log(`✅ Done. Sent ${sentCount} notifications.`);
+            process.exit(0);
           }
 
           main().catch(e => { console.error('Fatal:', e.message); process.exit(1); });
