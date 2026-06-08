@@ -6822,21 +6822,40 @@ document.getElementById('adminTrigger')?.addEventListener('click', () => {
 console.log('✅ BC Electric v1.0 — PWA | Push Notifications | Negative Points Fix');
 
 // ═══════════════════════════════════════════════════════════════
-// PWA — Service Worker Registration
+// PWA — Service Worker Registration + FCM
 // ═══════════════════════════════════════════════════════════════
+let _swReady = false;
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').then(reg => {
             console.log('[SW] Registered:', reg.scope);
             window._swReg = reg;
-            // ربط FCM بالـ Service Worker
-            if (_fcmMessaging) {
-                try { _fcmMessaging.useServiceWorker(reg); } catch(e) {}
-            }
-            initFCM();
-            // اطلب إذن الإشعارات تلقائياً عند أول دخول
+            _swReady = true;
+            // تهيئة FCM بعد تسجيل SW مباشرة
+            try {
+                if (firebase.messaging.isSupported()) {
+                    _fcmMessaging = firebase.messaging();
+                    _fcmMessaging.usePublicVapidKey(VAPID_KEY);
+                    _fcmMessaging.useServiceWorker(reg);
+                    console.log('[FCM] Ready ✅');
+                }
+            } catch(e) { console.warn('[FCM] Init error:', e); }
+            // اطلب إذن الإشعارات
             requestNotifPermission();
         }).catch(err => console.warn('[SW] Error:', err));
+    });
+} else {
+    // متصفح لا يدعم SW - استخدم FCM مباشرة
+    window.addEventListener('load', () => {
+        try {
+            if (firebase.messaging.isSupported()) {
+                _fcmMessaging = firebase.messaging();
+                _fcmMessaging.usePublicVapidKey(VAPID_KEY);
+                console.log('[FCM] Ready (no SW) ✅');
+            }
+        } catch(e) {}
+        requestNotifPermission();
     });
 }
 
@@ -6855,19 +6874,15 @@ const VAPID_KEY = "BIV4JLjKYxS5bYKmeyUqwfwYtAxPqX80wlMLrIKyS_C1BVEe8l6UB1zzyUK5Z
 let _fcmMessaging = null;
 
 function initFCM() {
-    try {
-        if (!firebase.messaging.isSupported()) { console.warn('[FCM] Not supported'); return; }
-        _fcmMessaging = firebase.messaging();
-        _fcmMessaging.usePublicVapidKey(VAPID_KEY);
-        console.log('[FCM] Initialized');
-    } catch(e) { console.warn('[FCM] Init error:', e); }
+    // تُستدعى من SW registration فقط
+    console.log('[FCM] initFCM called');
 }
 
 function getFCMToken() {
     if (!_fcmMessaging) {
-        // حاول تهيئة FCM مجدداً
-        try { initFCM(); } catch(e) {}
-        if (!_fcmMessaging) return;
+        console.warn('[FCM] Not ready yet, retrying in 2s...');
+        setTimeout(getFCMToken, 2000);
+        return;
     }
     if (!('Notification' in window) || Notification.permission !== 'granted') {
         requestNotifPermission();
