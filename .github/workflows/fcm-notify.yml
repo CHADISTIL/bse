@@ -65,15 +65,22 @@ jobs:
 
           function dbGet(path, token) {
             return new Promise((resolve, reject) => {
+              const url = `https://${projectId}-default-rtdb.firebaseio.com/${path}.json`;
+              console.log(`[DB] GET ${url.split('?')[0]}`);
               const req = https.request({
                 hostname: `${projectId}-default-rtdb.firebaseio.com`,
-                path: `/${path}.json?access_token=${token}`, method: 'GET'
+                path: `/${path}.json?access_token=${token}`,
+                method: 'GET'
               }, res => {
                 let data = '';
                 res.on('data', d => data += d);
-                res.on('end', () => { try { resolve(JSON.parse(data)); } catch(e) { resolve(null); } });
+                res.on('end', () => {
+                  console.log(`[DB] Response ${res.statusCode}: ${data.slice(0,100)}`);
+                  try { resolve(JSON.parse(data)); } catch(e) { resolve(null); }
+                });
               });
-              req.on('error', reject); req.end();
+              req.on('error', e => { console.error('[DB] Error:', e.message); reject(e); });
+              req.end();
             });
           }
 
@@ -82,7 +89,8 @@ jobs:
               const body = JSON.stringify(value);
               const req = https.request({
                 hostname: `${projectId}-default-rtdb.firebaseio.com`,
-                path: `/${path}.json?access_token=${token}`, method: 'PUT',
+                path: `/${path}.json?access_token=${token}`,
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
               }, res => {
                 let data = '';
@@ -104,7 +112,7 @@ jobs:
                   apns: { payload: { aps: { sound: 'default', badge: 1 } } },
                   webpush: {
                     headers: { Urgency: 'high' },
-                    notification: { icon: '/bse/icon-192.png', dir: 'rtl', vibrate: [200,100,200] }
+                    notification: { icon: '/bse/icon-192.png', dir: 'rtl' }
                   }
                 }
               });
@@ -121,13 +129,8 @@ jobs:
                 let data = '';
                 res.on('data', d => data += d);
                 res.on('end', () => {
-                  const result = JSON.parse(data);
-                  if (res.statusCode === 200) {
-                    console.log(`✅ FCM sent: ${title} → ${token.slice(0,15)}...`);
-                  } else {
-                    console.warn(`⚠️ FCM error ${res.statusCode}:`, data);
-                  }
-                  resolve(result);
+                  console.log(`[FCM] Status: ${res.statusCode} | ${data}`);
+                  resolve(JSON.parse(data));
                 });
               });
               req.on('error', reject); req.write(message); req.end();
@@ -136,23 +139,30 @@ jobs:
 
           async function main() {
             console.log('BC Electric FCM Worker started...');
+            console.log('Project:', projectId);
+            console.log('Time now:', new Date().toISOString());
+
             const accessToken = await getAccessToken();
             console.log('Access token obtained ✅');
 
-            const [notifications, fcmTokens] = await Promise.all([
-              dbGet('notifications', accessToken),
-              dbGet('fcm_tokens', accessToken)
-            ]);
+            const notifications = await dbGet('notifications', accessToken);
+            console.log('Notifications type:', typeof notifications);
+            console.log('Notifications null?', notifications === null);
 
-            if (!notifications) { console.log('No notifications'); return; }
-            if (!fcmTokens) { console.log('No FCM tokens registered'); return; }
+            if (!notifications) { console.log('No notifications in DB'); return; }
 
-            console.log(`Found ${Object.keys(notifications).length} notifications`);
-            console.log(`Found ${Object.keys(fcmTokens).length} FCM tokens`);
+            const keys = Object.keys(notifications);
+            console.log(`Total notifications: ${keys.length}`);
+            console.log('First key:', keys[0]);
+            console.log('First notif:', JSON.stringify(notifications[keys[0]]));
+
+            const fcmTokens = await dbGet('fcm_tokens', accessToken);
+            console.log('FCM tokens:', fcmTokens ? Object.keys(fcmTokens) : 'null');
+
+            if (!fcmTokens) { console.log('No FCM tokens!'); return; }
 
             const now = Date.now();
-            // آخر دقيقتين (120 ثانية) لضمان عدم تفويت إشعار
-            const twoMinutesAgo = now - 120000;
+            console.log('Now ms:', now);
 
             const titles = {
               attendance_recorded: '✅ تم تسجيل الحضور',
@@ -171,67 +181,58 @@ jobs:
             let sentCount = 0;
 
             for (const [notifId, notif] of Object.entries(notifications)) {
-              if (notif.fcm_sent) continue;
+              console.log(`\n--- ${notifId} ---`);
+              console.log('fcm_sent:', notif.fcm_sent);
+              console.log('timestamp:', notif.timestamp);
+              console.log('type:', notif.type);
+              console.log('forEmployee:', notif.forEmployee);
+              console.log('forAdmin:', notif.forAdmin);
+              console.log('employeeId:', notif.employeeId);
 
-              // استخدم timestamp مباشرة (أرقام) بدل date+time
-              let notifTime = null;
-              if (notif.timestamp) {
-                // timestamp قد يكون بالمللي ثانية أو الثواني
-                notifTime = notif.timestamp > 1e12 ? notif.timestamp : notif.timestamp * 1000;
-              }
+              if (notif.fcm_sent) { console.log('SKIP: already sent'); continue; }
 
-              // إذا لم يكن هناك timestamp، اعتبره جديداً
-              const isNew = !notifTime || notifTime >= twoMinutesAgo;
-              
-              if (!isNew) {
-                // علّم القديمة جداً (أكثر من ساعة)
-                if (notifTime && notifTime < now - 3600000) {
-                  await dbSet(`notifications/${notifId}/fcm_sent`, true, accessToken);
-                }
-                continue;
-              }
+              let notifTime = notif.timestamp || null;
+              if (notifTime && notifTime < 1e12) notifTime *= 1000;
 
+              const age = notifTime ? now - notifTime : 0;
+              console.log('Age (seconds):', Math.round(age/1000));
+
+              // أرسل أي إشعار غير مرسل بغض النظر عن الوقت
               const title = titles[notif.type] || 'BC Electric';
-              const body = notif.message || notif.employeeName || '';
-
-              console.log(`Processing: ${notifId} | type: ${notif.type} | forEmployee: ${notif.forEmployee} | forAdmin: ${notif.forAdmin}`);
+              const body = notif.message || notif.employeeName || notif.type || '';
 
               const recipients = [];
-
               if (notif.forAdmin) {
                 for (const [uid, data] of Object.entries(fcmTokens)) {
-                  if (data.role === 'admin' && data.token) {
-                    recipients.push({ token: data.token, uid });
-                  }
+                  if (data.role === 'admin' && data.token) recipients.push({ token: data.token, uid });
                 }
               }
-
               if (notif.forEmployee && notif.employeeId) {
                 const empId = String(notif.employeeId);
                 const empToken = fcmTokens[empId];
                 if (empToken && empToken.token) {
                   recipients.push({ token: empToken.token, uid: empId });
                 } else {
-                  console.log(`No token for employee: ${empId}`);
-                  console.log('Available tokens:', Object.keys(fcmTokens));
+                  console.log(`No token for empId: ${empId}`);
+                  console.log('Available uids:', Object.keys(fcmTokens));
                 }
               }
 
-              console.log(`Recipients: ${recipients.length}`);
+              console.log('Recipients count:', recipients.length);
 
-              for (const { token } of recipients) {
+              for (const { token, uid } of recipients) {
                 try {
                   await sendFCM(token, title, body, notif.type, accessToken);
                   sentCount++;
                 } catch(e) {
-                  console.warn('FCM send error:', e.message);
+                  console.warn('FCM error:', e.message);
                 }
               }
 
               await dbSet(`notifications/${notifId}/fcm_sent`, true, accessToken);
             }
 
-            console.log(`✅ Done. Sent ${sentCount} notifications.`);
+            console.log(`\n✅ Done. Sent ${sentCount} notifications.`);
           }
 
           main().catch(e => { console.error('Fatal:', e.message); process.exit(1); });
