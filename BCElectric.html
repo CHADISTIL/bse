@@ -3521,14 +3521,15 @@ window.grantMonthlyBonus = function(empId) {
     const pid = `BONUS-${Date.now()}`;
     // حفظ المكافأة في سجل الموظف
     database.ref(`employees/${empId}/attendance/${pid}`).set({
-        type:'payment', amount:amt, date:today, time:new Date().toLocaleTimeString('ar-EG'),
+        type:'payment', amount:amt, date:today, time:new Date().toLocaleTimeString('en-GB'),
         notes:`${t('bonus')||'مكافأة'}: ${reason}`, isPayment:true, isBonus:true, editable:true
     }).then(() => {
         // حفظ تفاصيل مكافأة الشهر (لعرضها للفائز)
         database.ref(`monthlyBonuses/${currentMonthKey}`).set({ empId, amount:amt, reason, date:today });
         database.ref('notifications').push({
             type:'bonus_granted', employeeId:empId, employeeName:emp?.name||'', amount:amt,
-            reason, date:today, time:new Date().toLocaleTimeString('ar-EG'), read:false, timestamp:Date.now(), forEmployee:true
+            timestamp: Date.now(),
+            reason, date:today, time:new Date().toLocaleTimeString('en-GB'), read:false, timestamp:Date.now(), forEmployee:true
         });
         showToast(t('bonus_granted_success')||'تم منح المكافأة', 'success');
         closeAdminMonthlyPopup(true);
@@ -3596,7 +3597,7 @@ function closeMonthlyAccount(empId, amount) {
         database.ref('notifications').push({
             type: 'account_closed', employeeId: empId, employeeName: emp.name,
             month: m, amount: amount || 0, remainingDebt: d.remaining,
-            date: today, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: true
+            date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true
         });
         showToast(t('alert_month_closed',{month:m}), 'purple', t('alert_month_closed_title'));
         if (currentEmpId == empId) renderDirectHistory();
@@ -4014,7 +4015,7 @@ window.saveSpecialSharesEdit = function(empId, date) {
             database.ref('notifications').push({
                 type:'share_edited_by_admin', employeeId:w.id, ownerId:parseInt(empId), date,
                 newAmount:newShares[w.id], forEmployee:true, forAdmin:false, read:false, timestamp:Date.now(),
-                time: new Date().toLocaleTimeString('ar-EG')
+                time: new Date().toLocaleTimeString('en-GB')
             });
         });
         closeModal('editAttendanceModal');
@@ -4043,7 +4044,7 @@ function saveAttendanceEdit(empId, date) {
     data.rating = rating;
     database.ref(`employees/${empId}/attendance/${date}`).update(data).then(() => {
         updateEmployeePoints(empId);
-        database.ref('notifications').push({ type: 'attendance_edited', employeeId: empId, employeeName: emp?.name, date, ratingNote: note, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: true });
+        database.ref('notifications').push({ type: 'attendance_edited', employeeId: empId, employeeName: emp?.name, date, ratingNote: note, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
         showToast(t('alert_attendance_edited',{ratingNote:note}), 'success', t('alert_attendance_edited_title'));
         closeModal('editAttendanceModal');
         if (currentEmpId == empId) { renderDirectHistory(); updateEmployeeProfile(); }
@@ -4056,7 +4057,7 @@ function deleteAttendanceRecord(empId, date) {
     database.ref(`employees/${empId}/attendance/${date}`).remove().then(() => {
         updateEmployeePoints(empId);
         const emp = employees.find(e => e.id == empId);
-        database.ref('notifications').push({ type: 'attendance_deleted', employeeId: empId, employeeName: emp?.name, date, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: true });
+        database.ref('notifications').push({ type: 'attendance_deleted', employeeId: empId, employeeName: emp?.name, date, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
         showToast(t('alert_record_deleted'), 'danger', t('alert_record_deleted_title'));
         closeModal('editAttendanceModal');
         if (currentEmpId == empId) renderDirectHistory();
@@ -4088,7 +4089,7 @@ function savePaymentEdit(empId, pid) {
     if (!amt || amt <= 0) { showToast(t('alert_enter_valid_amount'), 'warning'); return; }
     database.ref(`employees/${empId}/attendance/${pid}`).update({ amount: amt, pay: amt, date: d, originalDate: d, notes: note, edited: true, editDate: today }).then(() => {
         const emp = employees.find(e => e.id == empId);
-        database.ref('notifications').push({ type: 'payment_edited', employeeId: empId, employeeName: emp?.name, amount: amt, date: today, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: true });
+        database.ref('notifications').push({ type: 'payment_edited', employeeId: empId, employeeName: emp?.name, amount: amt, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
         showToast(t('alert_payment_edited'), 'success', t('alert_payment_recorded_title'));
         closeModal('editAttendanceModal');
         if (currentEmpId == empId) renderDirectHistory();
@@ -4100,7 +4101,7 @@ function deletePayment(empId, pid) {
     showAppDialog({icon:'<i class="fas fa-credit-card" style="color:white;"></i>',iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',title:t('confirm_title'),msg:t('alert_delete_payment_confirm'),confirmText:`<i class="fas fa-trash-alt"></i> ${t('delete')}`,confirmClass:'btn-danger',onConfirm:()=>{
     database.ref(`employees/${empId}/attendance/${pid}`).remove().then(() => {
         const emp = employees.find(e => e.id == empId);
-        database.ref('notifications').push({ type: 'payment_deleted', employeeId: empId, employeeName: emp?.name, date: today, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: true });
+        database.ref('notifications').push({ type: 'payment_deleted', employeeId: empId, employeeName: emp?.name, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
         showToast(t('alert_payment_deleted'), 'danger', t('alert_record_deleted_title'));
         closeModal('editAttendanceModal');
         if (currentEmpId == empId) renderDirectHistory();
@@ -4537,6 +4538,7 @@ function addAttendance(id) {
                             updateEmployeePoints(w.id);
                             return database.ref('notifications').push({
                                 type: 'special_work_added',
+                                timestamp: Date.now(),
                                 employeeId: w.id,
                                 ownerName: emp.name,
                                 date: date,
@@ -4545,7 +4547,7 @@ function addAttendance(id) {
                                 forEmployee: true,
                                 forAdmin: false,
                                 read: false, timestamp: Date.now(),
-                                time: new Date().toLocaleTimeString('ar-EG')
+                                time: new Date().toLocaleTimeString('en-GB')
                             });
                         })
                         .catch(err => console.error(`Error saving for worker ${w.id}:`, err));
@@ -4560,7 +4562,7 @@ function addAttendance(id) {
             const pDiv = document.getElementById(`selectedParticipants-${id}`);
             if (pDiv) pDiv.innerHTML = '';
         }
-        database.ref('notifications').push({ type: 'attendance_recorded', employeeId: id, employeeName: emp.name, status, overtime: ot, expense: ex, ratingNote: note, date, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: true });
+        database.ref('notifications').push({ type: 'attendance_recorded', employeeId: id, employeeName: emp.name, status, overtime: ot, expense: ex, ratingNote: note, date, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
         showToast(t('alert_attendance_saved',{date,ratingNote:note}), 'success', t('alert_attendance_saved_title'));
         ['ot', 'exp', 'rating'].forEach(f => { const el = document.getElementById(`${f}-${id}`); if (el) el.value = '0'; });
         const specRate = document.getElementById(`specRate-${id}`); if (specRate) specRate.value = '';
@@ -4642,7 +4644,7 @@ function saveAttEditFromAdmin() {
     const note = rating > 0 ? t('auto_calculated_rating', { rating }) : t('no_rating_calculated');
     database.ref(`employees/${currentEmpId}/attendance/${date}`).set(data).then(() => {
         updateEmployeePoints(currentEmpId);
-        database.ref('notifications').push({ type: 'attendance_edited', employeeId: currentEmpId, employeeName: emp?.name, date, ratingNote: note, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: true });
+        database.ref('notifications').push({ type: 'attendance_edited', employeeId: currentEmpId, employeeName: emp?.name, date, ratingNote: note, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
         showToast(t('alert_attendance_edited',{ratingNote:note}), 'success', t('alert_attendance_edited_title'));
         closeModal('editAttendanceModal');
         renderUI();
@@ -4702,13 +4704,13 @@ function recordFullPayment(empId, amount) {
             const total = amount + bonus;
             const pid = `PAY-${Date.now()}`;
             database.ref(`employees/${empId}/attendance/${pid}`).set({
-                type: 'payment', amount: total, date: today, time: new Date().toLocaleTimeString('ar-EG'),
+                type: 'payment', amount: total, date: today, time: new Date().toLocaleTimeString('en-GB'),
                 notes: bonus > 0 ? `${t('full_payment_recorded')} + ${t('bonus')}: ${bonus}` : t('full_payment_recorded'),
                 isPayment: true, isFullPayment: true, editable: true
             }).then(() => {
                 database.ref('notifications').push({
                     type: 'payment_recorded', employeeId: empId, employeeName: emp.name,
-                    amount: total, date: today, time: new Date().toLocaleTimeString('ar-EG'),
+                    amount: total, date: today, time: new Date().toLocaleTimeString('en-GB'),
                     read: false, timestamp: Date.now(), forEmployee: true
                 });
                 showToast(`${t('payment_recorded')} ${total} ${t('amount')}`, 'success', t('alert_payment_recorded_title'));
@@ -4760,12 +4762,12 @@ window.submitPartialPayment = function(empId) {
     const emp = employees.find(e => e.id == empId);
     const pid = `PART-${Date.now()}`;
     database.ref(`employees/${empId}/attendance/${pid}`).set({
-        type: 'payment', amount: amt, date: today, time: new Date().toLocaleTimeString('ar-EG'),
+        type: 'payment', amount: amt, date: today, time: new Date().toLocaleTimeString('en-GB'),
         notes: t('partial_payment_recorded'), isPayment: true, isPartial: true, editable: true
     }).then(() => {
         database.ref('notifications').push({
             type: 'payment_recorded', employeeId: empId, employeeName: emp.name,
-            amount: amt, date: today, time: new Date().toLocaleTimeString('ar-EG'),
+            amount: amt, date: today, time: new Date().toLocaleTimeString('en-GB'),
             read: false, timestamp: Date.now(), forEmployee: true
         });
         showToast(t('alert_partial_payment_recorded'), 'success', t('alert_payment_recorded_title'));
@@ -4815,10 +4817,10 @@ function grantBonus(empId) {
     const emp = employees.find(e => e.id == empId);
     const pid = `BONUS-${Date.now()}`;
     database.ref(`employees/${empId}/attendance/${pid}`).set({
-        type: 'payment', amount: amt, date: today, time: new Date().toLocaleTimeString('ar-EG'),
+        type: 'payment', amount: amt, date: today, time: new Date().toLocaleTimeString('en-GB'),
         notes: `${t('bonus')}: ${reason}`, isPayment: true, isBonus: true, editable: true
     }).then(() => {
-        database.ref('notifications').push({ type: 'bonus_granted', employeeId: empId, employeeName: emp.name, amount: amt, reason, date: today, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: true });
+        database.ref('notifications').push({ type: 'bonus_granted', employeeId: empId, employeeName: emp.name, amount: amt, reason, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
         showToast(t('bonus_granted_success'), 'purple', t('alert_bonus_granted_title'));
         closeModal('bonusAdminModal');
         renderUI();
@@ -5249,14 +5251,14 @@ function showRequestsSummary() {
 
 window.approveReq = function(eid, rid) {
     database.ref(`employees/${eid}/requests/${rid}`).update({ status: 'approved', notified: false }).then(() => {
-        database.ref('notifications').push({ type: 'request_response', employeeId: eid, status: 'approved', date: today, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: true });
+        database.ref('notifications').push({ type: 'request_response', employeeId: eid, status: 'approved', date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
         showToast(t('alert_request_approved'), 'success'); updateNotificationBadge();
     });
 };
 window.rejectReq = function(eid, rid) {
     showAppDialog({icon:'<i class="fas fa-times-circle" style="color:white;"></i>',iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',title:t('reject'),msg:t('enter_rejection_reason'),type:'prompt',placeholder:'...',confirmClass:'btn-danger',confirmText:`<i class="fas fa-times"></i> ${t('reject')}`,onConfirm:(reason)=>{
     database.ref(`employees/${eid}/requests/${rid}`).update({ status: 'rejected', notified: false, rejectReason: reason||'' }).then(() => {
-        database.ref('notifications').push({ type: 'request_response', employeeId: eid, status: 'rejected', rejectReason: reason||'', date: today, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: true });
+        database.ref('notifications').push({ type: 'request_response', employeeId: eid, status: 'rejected', rejectReason: reason||'', date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
         showToast(t('alert_request_rejected'), 'warning'); updateNotificationBadge();
     });
     }});
@@ -5305,7 +5307,7 @@ function submitRequest() {
     const note = document.getElementById('reqNote')?.value;
     if (!val && type !== 'زيادة_اجر') { showToast(t('alert_enter_value'), 'warning'); return; }
     database.ref(`employees/${currentEmpId}/requests`).push({ type, val, note, date: today, status: 'pending', notified: false }).then(() => {
-        database.ref('notifications').push({ type: 'new_request', employeeId: currentEmpId, employeeName: currentEmpData.name, requestType: type, requestVal: val, date: today, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forAdmin: true });
+        database.ref('notifications').push({ type: 'new_request', employeeId: currentEmpId, employeeName: currentEmpData.name, requestType: type, requestVal: val, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forAdmin: true });
         showToast(t('alert_request_sent'), 'success', t('alert_request_sent_title'));
         closeModal('requestModal');
     });
@@ -5469,8 +5471,8 @@ function sendMessage() {
     const s = isAdmin ? 'admin' : 'employee';
     const id = `msg-${Date.now()}`;
     Promise.all([
-        database.ref(`employees/${currentEmpId}/messages/${id}`).set({ id, text: txt, sender: s, time: new Date().toLocaleTimeString('ar-EG'), timestamp: Date.now(), read: false }),
-        database.ref('notifications').push({ type: 'new_message', employeeId: currentEmpId, message: txt, sender: s, date: today, time: new Date().toLocaleTimeString('ar-EG'), read: false, timestamp: Date.now(), forEmployee: s==='admin', forAdmin: s==='employee' })
+        database.ref(`employees/${currentEmpId}/messages/${id}`).set({ id, text: txt, sender: s, time: new Date().toLocaleTimeString('en-GB'), timestamp: Date.now(), read: false }),
+        database.ref('notifications').push({ type: 'new_message', employeeId: currentEmpId, message: txt, sender: s, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: s==='admin', forAdmin: s==='employee' })
     ]).then(() => { document.getElementById('chatInput').value = ''; });
 }
 function clearChatHistory() {
@@ -5727,7 +5729,7 @@ window.submitProposalShare = function(date, total, workers, ownerId, otherTotal)
                 type: 'share_approval_request', employeeId: w.id,
                 employeeName: currentEmpData?.name || '', date,
                 forEmployee: true, forAdmin: false, read: false, timestamp: Date.now(),
-                time: new Date().toLocaleTimeString('ar-EG')
+                time: new Date().toLocaleTimeString('en-GB')
             });
         });
     });
@@ -5857,7 +5859,7 @@ function initShares(ownerId, date, totalAmount, workers, customShares) {
                 type: 'share_new', employeeId: w.id, ownerId, ownerName: ownerEmp?.name || '',
                 date, amount: shares[w.id], totalAmount,
                 forEmployee: true, forAdmin: false, read: false, timestamp: Date.now(),
-                time: new Date().toLocaleTimeString('ar-EG')
+                time: new Date().toLocaleTimeString('en-GB')
             });
         });
     });
@@ -6252,7 +6254,7 @@ window.respondToProposal = function(ownerId, date, response) {
                             type:'share_settled', employeeId:w.id, ownerId, date,
                             finalAmount:newShares[w.id]||0, totalAmount:r.specialDailyRate||0,
                             forEmployee:true, forAdmin:false, read:false, timestamp:Date.now(),
-                            time: new Date().toLocaleTimeString('ar-EG')
+                            time: new Date().toLocaleTimeString('en-GB')
                         });
                     });
                 });
@@ -6287,7 +6289,7 @@ window.respondToProposal = function(ownerId, date, response) {
                         type:'share_rejected', employeeId:parseInt(senderId),
                         rejectorName: employees.find(e=>e.id==currentEmpId)?.name||'',
                         date, ownerId, forEmployee:true, forAdmin:false, read:false, timestamp:Date.now(),
-                        time: new Date().toLocaleTimeString('ar-EG')
+                        time: new Date().toLocaleTimeString('en-GB')
                     });
                 }
             });
@@ -6504,11 +6506,12 @@ window.submitProposeShare = function(ownerId, date, total, workers) {
         updates[`employees/${ownerId}/attendance/${date}/shareProposals/${w.id}`] = { ...proposalData, targetId: w.id };
         database.ref('notifications').push({
             type:'share_proposed', employeeId:w.id, ownerId,
+            timestamp: Date.now(),
             senderName:currentEmpData?.name||'', date,
             proposedAmount: proposedShares[w.id]||0,
             proposedPct: total>0 ? Math.round((proposedShares[w.id]||0)/total*100) : 0,
             forEmployee:true, forAdmin:false, read:false, timestamp:Date.now(),
-            time: new Date().toLocaleTimeString('ar-EG')
+            time: new Date().toLocaleTimeString('en-GB')
         });
     });
     database.ref().update(updates).then(() => {
@@ -6562,7 +6565,7 @@ window.saveAdminShareEdit = function(ownerId, date, total, workers) {
             database.ref('notifications').push({
                 type:'share_edited_by_admin', employeeId:w.id, ownerId, date,
                 newAmount:newShares[w.id], forEmployee:true, forAdmin:false, read:false, timestamp:Date.now(),
-                time: new Date().toLocaleTimeString('ar-EG')
+                time: new Date().toLocaleTimeString('en-GB')
             });
         });
     });
