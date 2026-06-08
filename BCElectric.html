@@ -4983,7 +4983,7 @@ function renderNotifications() {
                 <div class="notif-icon" style="background:${ic.bg};color:${ic.color};"><i class="fas ${ic.icon}"></i></div>
                 <div style="flex:1;min-width:0;">
                     <div class="notif-text" style="font-weight:${n.read?'500':'700'};color:${n.read?'var(--text-mid)':'var(--text)'};white-space:normal;">${msg}</div>
-                    <div class="notif-time"><i class="fas fa-clock" style="font-size:0.55rem;"></i> ${n.date||''} ${n.time||''}</div>
+                    <div class="notif-time"><i class="fas fa-clock" style="font-size:0.55rem;"></i> ${n.date||''} ${formatNotifTime(n.time)}</div>
                 </div>
                 ${!n.read ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--purple);flex-shrink:0;"></div>' : ''}
             </div>`;
@@ -5459,7 +5459,7 @@ function loadMessages() {
             const div = document.createElement('div');
             div.className = `chat-message ${m.sender==='employee'?'emp':'admin'}`;
             div.onclick = () => { if (isAdmin) showAppDialog({icon:'<i class="fas fa-comment-slash" style="color:white;"></i>',iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',title:t('confirm_title'),msg:t('alert_delete_message_confirm'),confirmClass:'btn-danger',onConfirm:()=>{ database.ref(`employees/${currentEmpId}/messages/${m.id}`).remove(); }}); };
-            div.innerHTML = `${m.text}<small><i class="fas fa-clock"></i> ${m.time}</small>`;
+            div.innerHTML = `${m.text}<small><i class="fas fa-clock"></i> ${formatNotifTime(m.time)}</small>`;
             d.appendChild(div);
         });
         d.scrollTop = d.scrollHeight;
@@ -6870,6 +6870,24 @@ function urlBase64ToUint8Array(base64String) {
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
     const rawData = atob(base64);
     return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+// ─── تحويل التوقيت لصيغة موحدة ───
+function formatNotifTime(time, date) {
+    if (!time) return '';
+    // إذا كان timestamp رقمي
+    if (!isNaN(time)) return new Date(Number(time)).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    // إذا كان وقت إنجليزي عادي HH:MM:SS
+    if (/^\d{1,2}:\d{2}/.test(time)) return time.slice(0,5);
+    // إذا كان عربي (يحتوي على ص أو م أو أرقام عربية) — حوّله
+    try {
+        const arabicNums = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
+        let t = time.replace(/[٠-٩]/g, d => arabicNums[d]);
+        t = t.replace(/ص/g,'AM').replace(/م/g,'PM').trim();
+        const d = new Date(`2000-01-01 ${t}`);
+        if (!isNaN(d)) return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    } catch(e) {}
+    return time;
 }
 
 // ─── FCM — Firebase Cloud Messaging ───
