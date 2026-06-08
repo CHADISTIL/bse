@@ -10,11 +10,11 @@
   "lang": "ar",
   "dir": "rtl",
   "icons": [
-    { "src": "https://i.suar.me/8zzNO/m", "sizes": "72x72", "type": "image/png", "purpose": "any maskable" },
-    { "src": "https://i.suar.me/8zzNO/m", "sizes": "96x96", "type": "image/png", "purpose": "any maskable" },
-    { "src": "https://i.suar.me/8zzNO/m", "sizes": "128x128", "type": "image/png", "purpose": "any maskable" },
-    { "src": "https://i.suar.me/8zzNO/m", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "https://i.suar.me/8zzNO/m", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "https://i.suar.me/8zzNO/m", "sizes": "72x72", "type": "image/png", "purpose": "maskable" },
+    { "src": "https://i.suar.me/8zzNO/m", "sizes": "96x96", "type": "image/png", "purpose": "maskable" },
+    { "src": "https://i.suar.me/8zzNO/m", "sizes": "128x128", "type": "image/png", "purpose": "maskable" },
+    { "src": "https://i.suar.me/8zzNO/m", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "https://i.suar.me/8zzNO/m", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "categories": ["business", "productivity"],
   "screenshots": []
