@@ -1194,6 +1194,14 @@
             .profile-avatar { width:72px; height:72px; }
             .closed-account-stats { grid-template-columns:repeat(2,1fr); }
         }
+
+    /* ─── Call Styles ─── */
+    #callModal { display:none; }
+    @keyframes pulse {
+        0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+        50% { box-shadow: 0 0 0 20px rgba(59,130,246,0); }
+    }
+    .chat-input-area { display:flex; align-items:center; gap:6px; padding:8px; }
     </style>
 </head>
 <body>
@@ -1203,7 +1211,7 @@
     <div id="welcomePage">
         <div class="welcome-card">
             <div class="welcome-icon" style="background:none;box-shadow:none;padding:0;width:140px;height:140px;margin:0 auto;">
-    <img src="https://i.suar.me/8zzNO/m" alt="BC Electric" style="width:140px;height:140px;border-radius:28px;object-fit:cover;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
+    <img src="https://i.suar.me/6zzv5/m" alt="BC Electric" style="width:140px;height:140px;border-radius:28px;object-fit:cover;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
 
 </div>
             <h1 class="welcome-title" data-i18n="app_title">BC Electric</h1>
@@ -1436,16 +1444,60 @@
             <div class="modal-header">
                 <div class="modal-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);"><i class="fas fa-comments" style="color:var(--accent);"></i></div>
                 <h2 id="chatEmpName" data-i18n="chat">المحادثة</h2>
-                <button class="close-btn" onclick="closeModal('chatModal')"><i class="fas fa-times"></i></button>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button onclick="startCall('audio')" title="مكالمة صوتية" style="background:linear-gradient(135deg,#22c55e,#16a34a);border:none;border-radius:50%;width:34px;height:34px;color:white;cursor:pointer;font-size:0.9rem;"><i class="fas fa-phone"></i></button>
+                    <button onclick="startCall('video')" title="مكالمة فيديو" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);border:none;border-radius:50%;width:34px;height:34px;color:white;cursor:pointer;font-size:0.9rem;"><i class="fas fa-video"></i></button>
+                    <button class="close-btn" onclick="closeModal('chatModal')"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <div class="chat-container" id="chatMessagesList"></div>
-            <div class="chat-input-area">
-                <input type="text" id="chatInput" class="chat-input" data-ph="type_message_placeholder" placeholder="اكتب رسالتك...">
+            <div class="chat-input-area" style="flex-wrap:wrap;gap:6px;">
+                <label for="fileInput" style="cursor:pointer;padding:8px 10px;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r-sm);font-size:0.85rem;color:var(--text-mid);" title="إرسال ملف">
+                    <i class="fas fa-paperclip"></i>
+                </label>
+                <input type="file" id="fileInput" style="display:none;" multiple onchange="sendFile(this)">
+                <input type="text" id="chatInput" class="chat-input" style="flex:1;" data-ph="type_message_placeholder" placeholder="اكتب رسالتك...">
                 <button class="chat-send" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
             </div>
             <button class="btn btn-outline btn-block btn-sm" style="margin-top:10px; color:var(--danger); border-color:var(--danger);" id="clearChatBtn" onclick="clearChatHistory()">
                 <i class="fas fa-trash-alt"></i> <span data-i18n="clear_chat_history">مسح سجل المحادثة</span>
             </button>
+        </div>
+    </div>
+
+    <!-- ▌ CALL MODAL ▐ -->
+    <div id="callModal" style="display:none;position:fixed;inset:0;background:#0a0a1a;z-index:9999;flex-direction:column;align-items:center;justify-content:space-between;padding:40px 20px 50px;">
+        <!-- Videos -->
+        <div id="videoArea" style="width:100%;flex:1;position:relative;display:flex;align-items:center;justify-content:center;">
+            <video id="remoteVideo" autoplay playsinline style="width:100%;max-height:60vh;border-radius:16px;background:#111;object-fit:cover;"></video>
+            <video id="localVideo"  autoplay playsinline muted style="position:absolute;bottom:10px;right:10px;width:100px;height:140px;border-radius:12px;background:#222;object-fit:cover;border:2px solid #fff3;"></video>
+            <div id="callStatus" style="position:absolute;top:16px;left:50%;transform:translateX(-50%);color:white;font-family:Cairo,sans-serif;font-size:0.9rem;background:rgba(0,0,0,0.5);padding:6px 16px;border-radius:20px;">جاري الاتصال...</div>
+            <!-- مشاركون إضافيون -->
+            <div id="extraParticipants" style="position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+        <!-- اسم المتصل -->
+        <div id="callEmpName" style="color:white;font-size:1.1rem;font-weight:700;font-family:Cairo,sans-serif;margin:10px 0;"></div>
+        <!-- أزرار التحكم -->
+        <div style="display:flex;gap:20px;justify-content:center;align-items:center;">
+            <button onclick="toggleMute()" id="muteBtn" style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:1.2rem;cursor:pointer;"><i class="fas fa-microphone" id="muteIcon"></i></button>
+            <button onclick="endCall()" style="width:68px;height:68px;border-radius:50%;background:#ef4444;border:none;color:white;font-size:1.4rem;cursor:pointer;"><i class="fas fa-phone-slash"></i></button>
+            <button onclick="toggleCamera()" id="camBtn" style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:1.2rem;cursor:pointer;"><i class="fas fa-video" id="camIcon"></i></button>
+            <button onclick="toggleSpeaker()" id="speakerBtn" style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:1.2rem;cursor:pointer;"><i class="fas fa-volume-up"></i></button>
+        </div>
+    </div>
+
+    <!-- ▌ INCOMING CALL ▐ -->
+    <div id="incomingCallBanner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:calc(100% - 40px);max-width:360px;background:linear-gradient(135deg,#1e3a8a,#0f1f4e);border-radius:16px;padding:16px;z-index:9998;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:48px;height:48px;background:rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1.2rem;"><i id="incomingCallIcon" class="fas fa-phone"></i></div>
+            <div>
+                <div id="incomingCallName" style="color:white;font-weight:700;font-family:Cairo,sans-serif;font-size:1rem;"></div>
+                <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;font-family:Cairo,sans-serif;" id="incomingCallType">مكالمة صوتية</div>
+            </div>
+        </div>
+        <div style="display:flex;gap:12px;">
+            <button onclick="answerCall()" style="flex:1;background:#22c55e;border:none;border-radius:12px;padding:12px;color:white;font-size:1rem;cursor:pointer;font-family:Cairo,sans-serif;"><i class="fas fa-phone"></i> رد</button>
+            <button onclick="rejectCall()" style="flex:1;background:#ef4444;border:none;border-radius:12px;padding:12px;color:white;font-size:1rem;cursor:pointer;font-family:Cairo,sans-serif;"><i class="fas fa-phone-slash"></i> رفض</button>
         </div>
     </div>
 
@@ -4979,7 +5031,7 @@ function renderNotifications() {
             };
             const ic = icons[n.type] || { icon:'fa-bell', color:'var(--info)', bg:'var(--info-bg)' };
             const msg = getNotifMessage(n);
-            return `<div class="notification-item${n.read?'':' unread'}" onclick="markNotifRead('${k}',this)">
+            return `<div class="notification-item${n.read?'':' unread'}" onclick="markNotifRead('${k}',this);handleNotifClick(${JSON.stringify(n).replace(/'/g,\'\')})">
                 <div class="notif-icon" style="background:${ic.bg};color:${ic.color};"><i class="fas ${ic.icon}"></i></div>
                 <div style="flex:1;min-width:0;">
                     <div class="notif-text" style="font-weight:${n.read?'500':'700'};color:${n.read?'var(--text-mid)':'var(--text)'};white-space:normal;">${msg}</div>
@@ -4989,6 +5041,55 @@ function renderNotifications() {
             </div>`;
         }).join('');
     });
+}
+
+
+function handleNotifClick(n) {
+    if (!n) return;
+    // أغلق نافذة الإشعارات
+    setTimeout(() => {
+        closeModal('notificationsModal');
+        switch(n.type) {
+            case 'new_message':
+                // افتح نافذة المحادثة مع الموظف المعني
+                if (isAdmin && n.employeeId) {
+                    const emp = employees.find(e => String(e.id) === String(n.employeeId));
+                    if (emp) { currentEmpId = emp.id; currentEmpData = emp; openChat(); }
+                } else {
+                    openChat();
+                }
+                break;
+            case 'new_request':
+                if (isAdmin) showRequestsSummary();
+                else showRequestsHistoryModal();
+                break;
+            case 'request_response':
+                showRequestsHistoryModal();
+                break;
+            case 'attendance_recorded':
+            case 'attendance_edited':
+            case 'attendance_deleted':
+                if (isAdmin && n.employeeId) {
+                    const emp = employees.find(e => String(e.id) === String(n.employeeId));
+                    if (emp) { currentEmpId = emp.id; currentEmpData = emp; showEmployeeProfile(emp); }
+                }
+                break;
+            case 'payment_recorded':
+            case 'payment_edited':
+            case 'bonus_granted':
+                if (isAdmin && n.employeeId) {
+                    const emp = employees.find(e => String(e.id) === String(n.employeeId));
+                    if (emp) { currentEmpId = emp.id; currentEmpData = emp; showEmployeeProfile(emp); }
+                }
+                break;
+            case 'negative_points_warning':
+                if (!isAdmin) checkNegativePoints(currentEmpData);
+                break;
+            case 'incoming_call':
+                // لا شيء — البانر يظهر تلقائياً
+                break;
+        }
+    }, 300);
 }
 
 function getNotifMessage(n) {
@@ -5218,36 +5319,96 @@ function showPresentEmployees() {
 }
 
 function showRequestsSummary() {
-    let html = '';
+    // جمع كل الطلبات مع بيانات الموظف
+    const allReqs = [];
     employees.forEach(e => {
         if (e.requests) Object.entries(e.requests).forEach(([k, r]) => {
-            if (!r.status || r.status === 'pending') {
-                const rtLabel = r.type === 'عطلة' ? t('holiday_request') : r.type === 'مصروف' ? t('expense_request') : r.type === 'زيادة_اجر' ? t('raise_request_label') : r.type;
-                html += `
-                <div class="card" style="margin-bottom:10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <strong style="font-size:0.9rem;">${e.name}</strong>
-                        <span class="tag tag-warning">${t('status_pending')}</span>
-                    </div>
-                    <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:10px;">${rtLabel}: ${r.val||''}</p>
-                    <div style="display:flex; gap:8px;">
-                        <button class="btn btn-success btn-sm" style="flex:1;" onclick="approveReq('${e.id}','${k}')"><i class="fas fa-check"></i> ${t('approve')}</button>
-                        <button class="btn btn-danger btn-sm" style="flex:1;" onclick="rejectReq('${e.id}','${k}')"><i class="fas fa-times"></i> ${t('reject')}</button>
-                    </div>
-                </div>`;
-            }
+            allReqs.push({ empId: e.id, empName: e.name, reqId: k, ...r });
         });
     });
-    if (!html) { showToast(t('no_requests'), 'info'); return; }
+    if (!allReqs.length) { showToast(t('no_requests'), 'info'); return; }
+
+    function buildTab(status) {
+        const filtered = status === 'pending'
+            ? allReqs.filter(r => !r.status || r.status === 'pending')
+            : allReqs.filter(r => r.status === status);
+
+        if (!filtered.length) return `<p style="text-align:center;padding:30px;color:var(--text-secondary);">لا توجد طلبات</p>`;
+
+        return filtered.map(r => {
+            const rtLabel = r.type === 'عطلة' ? t('holiday_request') : r.type === 'مصروف' ? t('expense_request') : r.type === 'زيادة_اجر' ? t('raise_request_label') : (r.type||'');
+            const statusTag = r.status === 'approved' ? 'success' : r.status === 'rejected' ? 'danger' : 'warning';
+            const statusLabel = r.status === 'approved' ? t('status_approved') : r.status === 'rejected' ? t('status_rejected') : t('status_pending');
+            return `<div class="card" style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <strong style="font-size:0.9rem;">${r.empName}</strong>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <span class="tag tag-${statusTag}">${statusLabel}</span>
+                        <button onclick="deleteReq('${r.empId}','${r.reqId}',this)" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.85rem;" title="حذف"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+                <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px;">${rtLabel}: ${r.val||''}</p>
+                ${r.rejectReason ? `<p style="font-size:0.75rem;color:var(--danger);">السبب: ${r.rejectReason}</p>` : ''}
+                ${r.date ? `<small style="color:var(--text-secondary);">${r.date}</small>` : ''}
+                ${(!r.status || r.status === 'pending') ? `
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                    <button class="btn btn-success btn-sm" style="flex:1;" onclick="approveReq('${r.empId}','${r.reqId}')"><i class="fas fa-check"></i> ${t('approve')}</button>
+                    <button class="btn btn-danger btn-sm" style="flex:1;" onclick="rejectReq('${r.empId}','${r.reqId}')"><i class="fas fa-times"></i> ${t('reject')}</button>
+                </div>` : ''}
+            </div>`;
+        }).join('');
+    }
+
+    const pendingCount = allReqs.filter(r => !r.status || r.status === 'pending').length;
+    const approvedCount = allReqs.filter(r => r.status === 'approved').length;
+    const rejectedCount = allReqs.filter(r => r.status === 'rejected').length;
+
     const m = document.createElement('div');
     m.className = 'modal modal-center'; m.style.display = 'flex';
-    m.innerHTML = `<div class="modal-dialog">
-        <div class="modal-header"><div class="modal-icon"><i class="fas fa-tasks"></i></div><h2>${t('pending_requests')}</h2><button class="close-btn" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i></button></div>
-        <div style="max-height:60vh; overflow-y:auto;">${html}</div>
-        <button class="btn btn-outline btn-block" style="margin-top:12px;" onclick="this.closest('.modal').remove()">${t('close')}</button>
+    m.innerHTML = `<div class="modal-dialog" style="max-width:480px;">
+        <div class="modal-header">
+            <div class="modal-icon"><i class="fas fa-tasks"></i></div>
+            <h2>الطلبات</h2>
+            <button class="close-btn" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i></button>
+        </div>
+        <!-- تبويبات -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+            <button id="tabPending" onclick="switchReqTab('pending')" class="btn btn-warning btn-sm" style="flex:1;font-size:0.78rem;">معلقة (${pendingCount})</button>
+            <button id="tabApproved" onclick="switchReqTab('approved')" class="btn btn-outline btn-sm" style="flex:1;font-size:0.78rem;">موافق عليها (${approvedCount})</button>
+            <button id="tabRejected" onclick="switchReqTab('rejected')" class="btn btn-outline btn-sm" style="flex:1;font-size:0.78rem;">مرفوضة (${rejectedCount})</button>
+        </div>
+        <div id="reqTabContent" style="max-height:55vh;overflow-y:auto;">${buildTab('pending')}</div>
+        <button class="btn btn-outline btn-block" style="margin-top:10px;" onclick="this.closest('.modal').remove()">${t('close')}</button>
     </div>`;
     document.body.appendChild(m);
+
+    window._reqBuildTab = buildTab;
+    window.switchReqTab = function(status) {
+        document.getElementById('reqTabContent').innerHTML = buildTab(status);
+        ['pending','approved','rejected'].forEach(s => {
+            const btn = document.getElementById('tab' + s.charAt(0).toUpperCase() + s.slice(1));
+            if (btn) btn.className = s === status ? `btn btn-${s==='pending'?'warning':s==='approved'?'success':'danger'} btn-sm` : 'btn btn-outline btn-sm';
+            if (btn) btn.style.flex = '1'; if (btn) btn.style.fontSize = '0.78rem';
+        });
+    };
 }
+
+window.deleteReq = function(eid, rid, btn) {
+    showAppDialog({
+        icon: '<i class="fas fa-trash-alt" style="color:white;"></i>',
+        iconBg: 'linear-gradient(135deg,#b91c1c,var(--danger))',
+        title: t('confirm_title'),
+        msg: 'هل تريد حذف هذا الطلب نهائياً؟',
+        confirmClass: 'btn-danger',
+        onConfirm: () => {
+            database.ref(`employees/${eid}/requests/${rid}`).remove().then(() => {
+                btn?.closest('.card')?.remove();
+                showToast('تم حذف الطلب', 'success');
+                updateNotificationBadge();
+            });
+        }
+    });
+};
 
 window.approveReq = function(eid, rid) {
     database.ref(`employees/${eid}/requests/${rid}`).update({ status: 'approved', notified: false }).then(() => {
@@ -5459,11 +5620,49 @@ function loadMessages() {
             const div = document.createElement('div');
             div.className = `chat-message ${m.sender==='employee'?'emp':'admin'}`;
             div.onclick = () => { if (isAdmin) showAppDialog({icon:'<i class="fas fa-comment-slash" style="color:white;"></i>',iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',title:t('confirm_title'),msg:t('alert_delete_message_confirm'),confirmClass:'btn-danger',onConfirm:()=>{ database.ref(`employees/${currentEmpId}/messages/${m.id}`).remove(); }}); };
-            div.innerHTML = `${m.text}<small><i class="fas fa-clock"></i> ${formatNotifTime(m.time)}</small>`;
+            
+            let inner = '';
+            if (m.type === 'image') {
+                inner = `<img src="${m.fileData}" style="max-width:200px;max-height:200px;border-radius:10px;cursor:pointer;display:block;margin-bottom:4px;" onclick="window.open('${m.fileData}','_blank')">`;
+                if (m.fileName) inner += `<small style="opacity:0.7;">${m.fileName}</small>`;
+            } else if (m.type === 'file') {
+                const ext = (m.fileName||'').split('.').pop().toLowerCase();
+                const icon = {pdf:'fa-file-pdf',doc:'fa-file-word',docx:'fa-file-word',xls:'fa-file-excel',xlsx:'fa-file-excel',mp3:'fa-file-audio',mp4:'fa-file-video'}[ext] || 'fa-file';
+                inner = `<a href="${m.fileData}" download="${m.fileName||'file'}" style="display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none;background:rgba(0,0,0,0.1);padding:8px 12px;border-radius:10px;margin-bottom:4px;">
+                    <i class="fas ${icon}" style="font-size:1.4rem;"></i>
+                    <div><div style="font-size:0.85rem;font-weight:600;">${m.fileName||'ملف'}</div><div style="font-size:0.72rem;opacity:0.7;">${m.fileSize||''}</div></div>
+                    <i class="fas fa-download" style="margin-right:auto;opacity:0.7;"></i>
+                </a>`;
+            } else {
+                inner = m.text || '';
+            }
+            div.innerHTML = `${inner}<small><i class="fas fa-clock"></i> ${formatNotifTime(m.time)}</small>`;
             d.appendChild(div);
         });
         d.scrollTop = d.scrollHeight;
     });
+}
+
+async function sendFile(input) {
+    const files = input.files;
+    if (!files.length) return;
+    for (const file of files) {
+        const MAX = 5 * 1024 * 1024; // 5MB
+        if (file.size > MAX) { showToast('الملف كبير جداً (أقصى 5MB)', 'error'); continue; }
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const data = e.target.result;
+            const isImage = file.type.startsWith('image/');
+            const s = isAdmin ? 'admin' : 'employee';
+            const id = `msg-${Date.now()}`;
+            const sizeStr = file.size > 1024*1024 ? `${(file.size/1024/1024).toFixed(1)} MB` : `${Math.round(file.size/1024)} KB`;
+            const msg = { id, type: isImage ? 'image' : 'file', fileData: data, fileName: file.name, fileSize: sizeStr, sender: s, time: new Date().toLocaleTimeString('en-GB'), timestamp: Date.now(), read: false };
+            await database.ref(`employees/${currentEmpId}/messages/${id}`).set(msg);
+            database.ref('notifications').push({ type: 'new_message', employeeId: currentEmpId, message: isImage ? '📷 صورة' : `📎 ${file.name}`, sender: s, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: s==='admin', forAdmin: s==='employee' });
+        };
+        reader.readAsDataURL(file);
+    }
+    input.value = '';
 }
 function sendMessage() {
     const txt = document.getElementById('chatInput')?.value.trim();
@@ -7142,6 +7341,280 @@ navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', e
         }
     }
 });
+
+
+// ═══════════════════════════════════════════════════════════════
+// WebRTC — نظام المكالمات الصوتية والمرئية
+// ═══════════════════════════════════════════════════════════════
+
+const TURN_CONFIG = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        {
+            urls: [
+                'turn:relay.metered.ca:80',
+                'turn:relay.metered.ca:443',
+                'turn:relay.metered.ca:443?transport=tcp'
+            ],
+            username: 'ea2323baeba53f54e12d5fe6',
+            credential: 'u/sq9mdMfgQRrr6y'
+        }
+    ]
+};
+
+let _pc = null;           // RTCPeerConnection
+let _localStream = null;  // الميكروفون والكاميرا
+let _callRef = null;      // Firebase ref للمكالمة
+let _callType = 'audio';  // audio | video
+let _isCaller = false;
+let _callId = null;
+let _mutedAudio = false;
+let _mutedVideo = false;
+let _incomingCallListener = null;
+
+// ─── بدء مكالمة ───
+async function startCall(type) {
+    _callType = type;
+    _isCaller = true;
+    _callId = `call_${currentEmpId}_${Date.now()}`;
+    
+    try {
+        _localStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: type === 'video'
+        });
+        showCallModal(type);
+        document.getElementById('localVideo').srcObject = _localStream;
+        document.getElementById('callEmpName').textContent = currentEmpData?.name || '';
+        document.getElementById('callStatus').textContent = 'جاري الاتصال...';
+
+        _pc = new RTCPeerConnection(TURN_CONFIG);
+        _localStream.getTracks().forEach(t => _pc.addTrack(t, _localStream));
+
+        _pc.ontrack = e => {
+            document.getElementById('remoteVideo').srcObject = e.streams[0];
+            document.getElementById('callStatus').textContent = '🟢 متصل';
+        };
+        _pc.onicecandidate = e => {
+            if (e.candidate) {
+                database.ref(`calls/${_callId}/callerCandidates`).push(e.candidate.toJSON());
+            }
+        };
+        _pc.onconnectionstatechange = () => {
+            if (['disconnected','failed','closed'].includes(_pc.connectionState)) endCall();
+        };
+
+        const offer = await _pc.createOffer();
+        await _pc.setLocalDescription(offer);
+
+        // حفظ المكالمة في Firebase
+        const callerName = isAdmin ? 'المشرف' : (currentEmpData?.name || 'موظف');
+        await database.ref(`calls/${_callId}`).set({
+            type,
+            callerId: isAdmin ? 'admin' : String(currentEmpId),
+            callerName,
+            receiverId: String(currentEmpId),
+            offer: { type: offer.type, sdp: offer.sdp },
+            status: 'ringing',
+            timestamp: Date.now()
+        });
+
+        _callRef = database.ref(`calls/${_callId}`);
+
+        // انتظر الرد
+        _callRef.on('value', async snap => {
+            const call = snap.val();
+            if (!call) return endCall();
+            if (call.answer && _pc.signalingState === 'have-local-offer') {
+                await _pc.setRemoteDescription(new RTCSessionDescription(call.answer));
+            }
+            if (call.status === 'rejected') { showToast('تم رفض المكالمة', 'warning'); endCall(); }
+            if (call.status === 'ended') endCall();
+        });
+
+        // استمع لـ ICE candidates من المستقبل
+        database.ref(`calls/${_callId}/receiverCandidates`).on('child_added', snap => {
+            if (_pc) _pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});
+        });
+
+        // إرسال إشعار للمستقبل
+        database.ref('notifications').push({
+            type: 'incoming_call',
+            callId: _callId,
+            callType: type,
+            callerName,
+            employeeId: currentEmpId,
+            forEmployee: isAdmin,
+            forAdmin: !isAdmin,
+            date: today,
+            time: new Date().toLocaleTimeString('en-GB'),
+            timestamp: Date.now(),
+            read: false
+        });
+
+    } catch(e) {
+        console.error('Call error:', e);
+        showToast('تعذر بدء المكالمة — تحقق من الإذن', 'error');
+        endCall();
+    }
+}
+
+// ─── الرد على مكالمة ───
+async function answerCall() {
+    document.getElementById('incomingCallBanner').style.display = 'none';
+    const callData = window._pendingCall;
+    if (!callData) return;
+    _callId = callData.callId;
+    _callType = callData.callType || 'audio';
+    _isCaller = false;
+
+    try {
+        _localStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: _callType === 'video'
+        });
+        showCallModal(_callType);
+        document.getElementById('localVideo').srcObject = _localStream;
+        document.getElementById('callEmpName').textContent = callData.callerName || '';
+        document.getElementById('callStatus').textContent = '🟢 متصل';
+
+        _pc = new RTCPeerConnection(TURN_CONFIG);
+        _localStream.getTracks().forEach(t => _pc.addTrack(t, _localStream));
+
+        _pc.ontrack = e => {
+            document.getElementById('remoteVideo').srcObject = e.streams[0];
+        };
+        _pc.onicecandidate = e => {
+            if (e.candidate) {
+                database.ref(`calls/${_callId}/receiverCandidates`).push(e.candidate.toJSON());
+            }
+        };
+        _pc.onconnectionstatechange = () => {
+            if (['disconnected','failed','closed'].includes(_pc.connectionState)) endCall();
+        };
+
+        _callRef = database.ref(`calls/${_callId}`);
+        const snap = await _callRef.once('value');
+        const call = snap.val();
+        if (!call?.offer) return endCall();
+
+        await _pc.setRemoteDescription(new RTCSessionDescription(call.offer));
+        const answer = await _pc.createAnswer();
+        await _pc.setLocalDescription(answer);
+        await _callRef.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'connected' });
+
+        // استمع لـ ICE candidates من المتصل
+        database.ref(`calls/${_callId}/callerCandidates`).on('child_added', snap => {
+            if (_pc) _pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});
+        });
+
+        _callRef.on('value', snap => {
+            const c = snap.val();
+            if (!c || c.status === 'ended') endCall();
+        });
+
+    } catch(e) {
+        console.error('Answer error:', e);
+        showToast('تعذر الرد', 'error');
+        endCall();
+    }
+}
+
+// ─── رفض المكالمة ───
+function rejectCall() {
+    document.getElementById('incomingCallBanner').style.display = 'none';
+    if (window._pendingCall?.callId) {
+        database.ref(`calls/${window._pendingCall.callId}`).update({ status: 'rejected' });
+    }
+    window._pendingCall = null;
+}
+
+// ─── إنهاء المكالمة ───
+function endCall() {
+    if (_pc) { _pc.close(); _pc = null; }
+    if (_localStream) { _localStream.getTracks().forEach(t => t.stop()); _localStream = null; }
+    if (_callRef) { _callRef.update({ status: 'ended' }); _callRef.off(); _callRef = null; }
+    if (_callId) { database.ref(`calls/${_callId}/callerCandidates`).off(); database.ref(`calls/${_callId}/receiverCandidates`).off(); }
+    document.getElementById('callModal').style.display = 'none';
+    document.getElementById('remoteVideo').srcObject = null;
+    document.getElementById('localVideo').srcObject = null;
+    _callId = null;
+}
+
+// ─── تبديل الميكروفون ───
+function toggleMute() {
+    if (!_localStream) return;
+    _mutedAudio = !_mutedAudio;
+    _localStream.getAudioTracks().forEach(t => t.enabled = !_mutedAudio);
+    document.getElementById('muteIcon').className = _mutedAudio ? 'fas fa-microphone-slash' : 'fas fa-microphone';
+    document.getElementById('muteBtn').style.background = _mutedAudio ? '#ef4444' : 'rgba(255,255,255,0.15)';
+}
+
+// ─── تبديل الكاميرا ───
+function toggleCamera() {
+    if (!_localStream) return;
+    _mutedVideo = !_mutedVideo;
+    _localStream.getVideoTracks().forEach(t => t.enabled = !_mutedVideo);
+    document.getElementById('camIcon').className = _mutedVideo ? 'fas fa-video-slash' : 'fas fa-video';
+    document.getElementById('camBtn').style.background = _mutedVideo ? '#ef4444' : 'rgba(255,255,255,0.15)';
+}
+
+// ─── تبديل السماعة ───
+function toggleSpeaker() {
+    const v = document.getElementById('remoteVideo');
+    v.muted = !v.muted;
+    document.getElementById('speakerBtn').style.background = v.muted ? '#ef4444' : 'rgba(255,255,255,0.15)';
+}
+
+// ─── إظهار نافذة المكالمة ───
+function showCallModal(type) {
+    const modal = document.getElementById('callModal');
+    modal.style.display = 'flex';
+    document.getElementById('videoArea').style.display = type === 'video' ? 'flex' : 'none';
+    // للمكالمة الصوتية: أخفِ الفيديو وأظهر أيقونة
+    if (type === 'audio') {
+        document.getElementById('camBtn').style.display = 'none';
+        document.getElementById('videoArea').style.display = 'flex';
+        document.getElementById('remoteVideo').style.display = 'none';
+        document.getElementById('localVideo').style.display = 'none';
+        // أضف أيقونة صوت كبيرة
+        const icon = document.createElement('div');
+        icon.id = 'audioCallIcon';
+        icon.style.cssText = 'width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#1e3a8a,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:white;animation:pulse 1.5s infinite;';
+        icon.innerHTML = '<i class="fas fa-phone"></i>';
+        document.getElementById('videoArea').appendChild(icon);
+    }
+}
+
+// ─── استمع للمكالمات الواردة ───
+function listenForIncomingCalls() {
+    const myId = isAdmin ? 'admin' : String(currentEmpId);
+    database.ref('calls').orderByChild('receiverId').equalTo(myId).on('child_added', snap => {
+        const call = snap.val();
+        if (!call || call.status !== 'ringing') return;
+        // تجاهل المكالمات القديمة (أكثر من 30 ثانية)
+        if (Date.now() - (call.timestamp || 0) > 30000) return;
+        window._pendingCall = { callId: snap.key, callerName: call.callerName, callType: call.type };
+        // إظهار بانر المكالمة الواردة
+        document.getElementById('incomingCallName').textContent = call.callerName || 'مكالمة واردة';
+        document.getElementById('incomingCallType').textContent = call.type === 'video' ? 'مكالمة فيديو' : 'مكالمة صوتية';
+        document.getElementById('incomingCallIcon').className = call.type === 'video' ? 'fas fa-video' : 'fas fa-phone';
+        document.getElementById('incomingCallBanner').style.display = 'block';
+        // نغمة رنين
+        try {
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            osc.connect(ctx.destination);
+            osc.frequency.value = 440;
+            osc.start(); setTimeout(() => osc.stop(), 800);
+        } catch(e) {}
+        // أخفِ البانر بعد 30 ثانية
+        setTimeout(() => {
+            if (document.getElementById('incomingCallBanner').style.display !== 'none') rejectCall();
+        }, 30000);
+    });
+}
 
 // ─── تشغيل مستمع الإشعارات للمشرف فور دخوله ───
 const _origRenderUI = typeof renderUI === 'function' ? renderUI : null;
