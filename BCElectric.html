@@ -1211,7 +1211,7 @@
     <div id="welcomePage">
         <div class="welcome-card">
             <div class="welcome-icon" style="background:none;box-shadow:none;padding:0;width:140px;height:140px;margin:0 auto;">
-    <img src="https://i.suar.me/6zzv5/m" alt="BC Electric" style="width:140px;height:140px;border-radius:28px;object-fit:cover;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
+    <img src="https://i.suar.me/8zzNO/m" alt="BC Electric" style="width:140px;height:140px;border-radius:28px;object-fit:cover;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
 
 </div>
             <h1 class="welcome-title" data-i18n="app_title">BC Electric</h1>
@@ -4500,7 +4500,7 @@ function updateStats() {
     let present = 0, reqs = 0, totalRem = 0;
     active.forEach(e => {
         if (e.attendance?.[today]?.s && e.attendance[today].s !== '0' && e.attendance[today].s !== 'h') present++;
-        if (e.requests) reqs += Object.keys(e.requests).length;
+        if (e.requests) reqs += Object.values(e.requests).filter(r => !r.status || r.status === 'pending').length;
         const d = calculateRemainingDebt(e);
         if (d.remaining > 0) totalRem += d.remaining;
     });
@@ -5031,7 +5031,8 @@ function renderNotifications() {
             };
             const ic = icons[n.type] || { icon:'fa-bell', color:'var(--info)', bg:'var(--info-bg)' };
             const msg = getNotifMessage(n);
-            return `<div class="notification-item${n.read?'':' unread'}" onclick="markNotifRead('${k}',this);handleNotifClick(${JSON.stringify(n).replace(/'/g,\'\')})">
+            const notifJson = encodeURIComponent(JSON.stringify(n));
+            return `<div class="notification-item${n.read?'':' unread'}" data-notif-key="${k}" data-notif='${notifJson}' onclick="markNotifRead('${k}',this)">
                 <div class="notif-icon" style="background:${ic.bg};color:${ic.color};"><i class="fas ${ic.icon}"></i></div>
                 <div style="flex:1;min-width:0;">
                     <div class="notif-text" style="font-weight:${n.read?'500':'700'};color:${n.read?'var(--text-mid)':'var(--text)'};white-space:normal;">${msg}</div>
@@ -5041,55 +5042,6 @@ function renderNotifications() {
             </div>`;
         }).join('');
     });
-}
-
-
-function handleNotifClick(n) {
-    if (!n) return;
-    // أغلق نافذة الإشعارات
-    setTimeout(() => {
-        closeModal('notificationsModal');
-        switch(n.type) {
-            case 'new_message':
-                // افتح نافذة المحادثة مع الموظف المعني
-                if (isAdmin && n.employeeId) {
-                    const emp = employees.find(e => String(e.id) === String(n.employeeId));
-                    if (emp) { currentEmpId = emp.id; currentEmpData = emp; openChat(); }
-                } else {
-                    openChat();
-                }
-                break;
-            case 'new_request':
-                if (isAdmin) showRequestsSummary();
-                else showRequestsHistoryModal();
-                break;
-            case 'request_response':
-                showRequestsHistoryModal();
-                break;
-            case 'attendance_recorded':
-            case 'attendance_edited':
-            case 'attendance_deleted':
-                if (isAdmin && n.employeeId) {
-                    const emp = employees.find(e => String(e.id) === String(n.employeeId));
-                    if (emp) { currentEmpId = emp.id; currentEmpData = emp; showEmployeeProfile(emp); }
-                }
-                break;
-            case 'payment_recorded':
-            case 'payment_edited':
-            case 'bonus_granted':
-                if (isAdmin && n.employeeId) {
-                    const emp = employees.find(e => String(e.id) === String(n.employeeId));
-                    if (emp) { currentEmpId = emp.id; currentEmpData = emp; showEmployeeProfile(emp); }
-                }
-                break;
-            case 'negative_points_warning':
-                if (!isAdmin) checkNegativePoints(currentEmpData);
-                break;
-            case 'incoming_call':
-                // لا شيء — البانر يظهر تلقائياً
-                break;
-        }
-    }, 300);
 }
 
 function getNotifMessage(n) {
@@ -5127,12 +5079,65 @@ function getNotifMessage(n) {
     }
 }
 
-window.markNotifRead = function(key, el) {
+window.markNotifRead = function(key, el, notifDataParam) {
     database.ref(`notifications/${key}`).update({ read: true });
     el.classList.remove('unread');
     const dot = el.querySelector('div[style*="border-radius:50%"]');
     if (dot) dot.remove();
     updateNotificationBadge();
+    // قراءة بيانات الإشعار من data attribute
+    let notifData = notifDataParam;
+    if (!notifData) {
+        try { notifData = JSON.parse(decodeURIComponent(el.getAttribute('data-notif') || '{}')); } catch(e) { notifData = {}; }
+    }
+    // فتح النافذة المعنية بالإشعار
+    if (notifData && notifData.type) {
+        closeModal('notificationsModal');
+        setTimeout(() => {
+            switch(notifData.type) {
+                case 'new_request':
+                    if (isAdmin) showRequestsSummary();
+                    break;
+                case 'request_response':
+                    if (!isAdmin) showRequestsHistoryModal();
+                    break;
+                case 'attendance_recorded':
+                case 'attendance_edited':
+                case 'attendance_deleted':
+                    if (isAdmin && notifData.employeeId) {
+                        const emp = employees.find(e => String(e.id) === String(notifData.employeeId));
+                        if (emp) openEmployeeDetails(emp.id);
+                    }
+                    break;
+                case 'payment_recorded':
+                case 'payment_edited':
+                case 'payment_deleted':
+                    if (isAdmin && notifData.employeeId) {
+                        const emp = employees.find(e => String(e.id) === String(notifData.employeeId));
+                        if (emp) openEmployeeDetails(emp.id);
+                    } else if (!isAdmin) {
+                        const pm = document.getElementById('paymentsHistoryModal');
+                        if (pm) { showRequestsHistoryModal && showRequestsHistoryModal(); }
+                    }
+                    break;
+                case 'new_message':
+                    if (typeof openChat === 'function') openChat();
+                    else if (typeof openMessages === 'function') openMessages();
+                    break;
+                case 'bonus_granted':
+                    if (!isAdmin && typeof showRewardsModal === 'function') showRewardsModal();
+                    break;
+                case 'special_work_added':
+                case 'share_settled':
+                case 'share_edited_by_admin':
+                case 'share_rejected':
+                    // لا توجد دالة مباشرة — لا شيء
+                    break;
+                default:
+                    break;
+            }
+        }, 250);
+    }
 };
 
 function clearAllNotifications() {
@@ -5319,92 +5324,81 @@ function showPresentEmployees() {
 }
 
 function showRequestsSummary() {
-    // جمع كل الطلبات مع بيانات الموظف
-    const allReqs = [];
+    let pendingHtml = '', approvedHtml = '', rejectedHtml = '';
     employees.forEach(e => {
-        if (e.requests) Object.entries(e.requests).forEach(([k, r]) => {
-            allReqs.push({ empId: e.id, empName: e.name, reqId: k, ...r });
+        if (!e.requests) return;
+        Object.entries(e.requests).forEach(([k, r]) => {
+            const rtLabel = r.type === 'عطلة' ? t('holiday_request') : r.type === 'مصروف' ? t('expense_request') : r.type === 'زيادة_اجر' ? t('raise_request_label') : (r.type || '');
+            const delBtn = `<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);padding:4px 8px;" onclick="deleteAdminRequest('${e.id}','${k}',this)"><i class="fas fa-trash-alt"></i></button>`;
+            if (!r.status || r.status === 'pending') {
+                pendingHtml += `
+                <div class="card" style="margin-bottom:10px;" id="req-card-${k}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <strong style="font-size:0.9rem;">${e.name}</strong>
+                        <div style="display:flex;gap:6px;align-items:center;"><span class="tag tag-warning">${t('status_pending')}</span>${delBtn}</div>
+                    </div>
+                    <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:10px;">${rtLabel}${r.val ? ': '+r.val : ''}${r.note ? ' — '+r.note : ''}</p>
+                    <small style="color:var(--text-secondary);display:block;margin-bottom:8px;">${r.date||''}</small>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-success btn-sm" style="flex:1;" onclick="approveReq('${e.id}','${k}')"><i class="fas fa-check"></i> ${t('approve')}</button>
+                        <button class="btn btn-danger btn-sm" style="flex:1;" onclick="rejectReq('${e.id}','${k}')"><i class="fas fa-times"></i> ${t('reject')}</button>
+                    </div>
+                </div>`;
+            } else if (r.status === 'approved') {
+                approvedHtml += `
+                <div class="card" style="margin-bottom:8px;border-color:var(--success);" id="req-card-${k}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <strong style="font-size:0.88rem;">${e.name}</strong>
+                        <div style="display:flex;gap:6px;align-items:center;"><span class="tag tag-success">${t('status_approved')}</span>${delBtn}</div>
+                    </div>
+                    <p style="font-size:0.8rem; color:var(--text-secondary);">${rtLabel}${r.val ? ': '+r.val : ''}</p>
+                    <small style="color:var(--text-secondary);">${r.date||''}</small>
+                </div>`;
+            } else if (r.status === 'rejected') {
+                rejectedHtml += `
+                <div class="card" style="margin-bottom:8px;border-color:var(--danger);" id="req-card-${k}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <strong style="font-size:0.88rem;">${e.name}</strong>
+                        <div style="display:flex;gap:6px;align-items:center;"><span class="tag tag-danger">${t('status_rejected')}</span>${delBtn}</div>
+                    </div>
+                    <p style="font-size:0.8rem; color:var(--text-secondary);">${rtLabel}${r.val ? ': '+r.val : ''}</p>
+                    ${r.rejectReason ? `<p style="font-size:0.75rem;color:var(--danger);">${t('reject_reason')}: ${r.rejectReason}</p>` : ''}
+                    <small style="color:var(--text-secondary);">${r.date||''}</small>
+                </div>`;
+            }
         });
     });
-    if (!allReqs.length) { showToast(t('no_requests'), 'info'); return; }
-
-    function buildTab(status) {
-        const filtered = status === 'pending'
-            ? allReqs.filter(r => !r.status || r.status === 'pending')
-            : allReqs.filter(r => r.status === status);
-
-        if (!filtered.length) return `<p style="text-align:center;padding:30px;color:var(--text-secondary);">لا توجد طلبات</p>`;
-
-        return filtered.map(r => {
-            const rtLabel = r.type === 'عطلة' ? t('holiday_request') : r.type === 'مصروف' ? t('expense_request') : r.type === 'زيادة_اجر' ? t('raise_request_label') : (r.type||'');
-            const statusTag = r.status === 'approved' ? 'success' : r.status === 'rejected' ? 'danger' : 'warning';
-            const statusLabel = r.status === 'approved' ? t('status_approved') : r.status === 'rejected' ? t('status_rejected') : t('status_pending');
-            return `<div class="card" style="margin-bottom:10px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                    <strong style="font-size:0.9rem;">${r.empName}</strong>
-                    <div style="display:flex;gap:6px;align-items:center;">
-                        <span class="tag tag-${statusTag}">${statusLabel}</span>
-                        <button onclick="deleteReq('${r.empId}','${r.reqId}',this)" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.85rem;" title="حذف"><i class="fas fa-trash-alt"></i></button>
-                    </div>
-                </div>
-                <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px;">${rtLabel}: ${r.val||''}</p>
-                ${r.rejectReason ? `<p style="font-size:0.75rem;color:var(--danger);">السبب: ${r.rejectReason}</p>` : ''}
-                ${r.date ? `<small style="color:var(--text-secondary);">${r.date}</small>` : ''}
-                ${(!r.status || r.status === 'pending') ? `
-                <div style="display:flex;gap:8px;margin-top:8px;">
-                    <button class="btn btn-success btn-sm" style="flex:1;" onclick="approveReq('${r.empId}','${r.reqId}')"><i class="fas fa-check"></i> ${t('approve')}</button>
-                    <button class="btn btn-danger btn-sm" style="flex:1;" onclick="rejectReq('${r.empId}','${r.reqId}')"><i class="fas fa-times"></i> ${t('reject')}</button>
-                </div>` : ''}
-            </div>`;
-        }).join('');
-    }
-
-    const pendingCount = allReqs.filter(r => !r.status || r.status === 'pending').length;
-    const approvedCount = allReqs.filter(r => r.status === 'approved').length;
-    const rejectedCount = allReqs.filter(r => r.status === 'rejected').length;
-
+    const allEmpty = !pendingHtml && !approvedHtml && !rejectedHtml;
+    if (allEmpty) { showToast(t('no_requests'), 'info'); return; }
+    const sectionHtml = `
+        ${pendingHtml ? `<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:800;color:var(--warning);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px;"><i class="fas fa-clock"></i> ${t('status_pending')}</div>${pendingHtml}</div>` : ''}
+        ${approvedHtml ? `<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:800;color:var(--success);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px;"><i class="fas fa-check-circle"></i> ${t('status_approved')}</div>${approvedHtml}</div>` : ''}
+        ${rejectedHtml ? `<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:800;color:var(--danger);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px;"><i class="fas fa-times-circle"></i> ${t('status_rejected')}</div>${rejectedHtml}</div>` : ''}
+    `;
     const m = document.createElement('div');
-    m.className = 'modal modal-center'; m.style.display = 'flex';
-    m.innerHTML = `<div class="modal-dialog" style="max-width:480px;">
-        <div class="modal-header">
-            <div class="modal-icon"><i class="fas fa-tasks"></i></div>
-            <h2>الطلبات</h2>
-            <button class="close-btn" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i></button>
-        </div>
-        <!-- تبويبات -->
-        <div style="display:flex;gap:6px;margin-bottom:12px;">
-            <button id="tabPending" onclick="switchReqTab('pending')" class="btn btn-warning btn-sm" style="flex:1;font-size:0.78rem;">معلقة (${pendingCount})</button>
-            <button id="tabApproved" onclick="switchReqTab('approved')" class="btn btn-outline btn-sm" style="flex:1;font-size:0.78rem;">موافق عليها (${approvedCount})</button>
-            <button id="tabRejected" onclick="switchReqTab('rejected')" class="btn btn-outline btn-sm" style="flex:1;font-size:0.78rem;">مرفوضة (${rejectedCount})</button>
-        </div>
-        <div id="reqTabContent" style="max-height:55vh;overflow-y:auto;">${buildTab('pending')}</div>
-        <button class="btn btn-outline btn-block" style="margin-top:10px;" onclick="this.closest('.modal').remove()">${t('close')}</button>
+    m.className = 'modal modal-center'; m.id = 'adminRequestsSummaryModal'; m.style.display = 'flex';
+    m.innerHTML = `<div class="modal-dialog">
+        <div class="modal-header"><div class="modal-icon"><i class="fas fa-tasks"></i></div><h2>${t('requests')}</h2><button class="close-btn" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i></button></div>
+        <div style="max-height:65vh; overflow-y:auto;">${sectionHtml}</div>
+        <button class="btn btn-outline btn-block" style="margin-top:12px;" onclick="this.closest('.modal').remove()">${t('close')}</button>
     </div>`;
     document.body.appendChild(m);
-
-    window._reqBuildTab = buildTab;
-    window.switchReqTab = function(status) {
-        document.getElementById('reqTabContent').innerHTML = buildTab(status);
-        ['pending','approved','rejected'].forEach(s => {
-            const btn = document.getElementById('tab' + s.charAt(0).toUpperCase() + s.slice(1));
-            if (btn) btn.className = s === status ? `btn btn-${s==='pending'?'warning':s==='approved'?'success':'danger'} btn-sm` : 'btn btn-outline btn-sm';
-            if (btn) btn.style.flex = '1'; if (btn) btn.style.fontSize = '0.78rem';
-        });
-    };
 }
 
-window.deleteReq = function(eid, rid, btn) {
+window.deleteAdminRequest = function(eid, rid, btn) {
     showAppDialog({
-        icon: '<i class="fas fa-trash-alt" style="color:white;"></i>',
-        iconBg: 'linear-gradient(135deg,#b91c1c,var(--danger))',
+        icon:'<i class="fas fa-trash-alt" style="color:white;"></i>',
+        iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',
         title: t('confirm_title'),
-        msg: 'هل تريد حذف هذا الطلب نهائياً؟',
-        confirmClass: 'btn-danger',
+        msg: t('alert_clear_requests_confirm') || 'حذف هذا الطلب؟',
+        confirmClass:'btn-danger',
         onConfirm: () => {
             database.ref(`employees/${eid}/requests/${rid}`).remove().then(() => {
-                btn?.closest('.card')?.remove();
-                showToast('تم حذف الطلب', 'success');
+                const card = document.getElementById(`req-card-${rid}`);
+                if (card) card.remove();
+                updateStats();
                 updateNotificationBadge();
+                showToast(t('alert_record_deleted_title') || 'تم الحذف', 'warning');
             });
         }
     });
@@ -5413,14 +5407,20 @@ window.deleteReq = function(eid, rid, btn) {
 window.approveReq = function(eid, rid) {
     database.ref(`employees/${eid}/requests/${rid}`).update({ status: 'approved', notified: false }).then(() => {
         database.ref('notifications').push({ type: 'request_response', employeeId: eid, status: 'approved', date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
-        showToast(t('alert_request_approved'), 'success'); updateNotificationBadge();
+        showToast(t('alert_request_approved'), 'success'); updateNotificationBadge(); updateStats();
+        // أعد تحميل نافذة الطلبات إن كانت مفتوحة
+        const modal = document.getElementById('adminRequestsSummaryModal');
+        if (modal) { modal.remove(); showRequestsSummary(); }
     });
 };
 window.rejectReq = function(eid, rid) {
     showAppDialog({icon:'<i class="fas fa-times-circle" style="color:white;"></i>',iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',title:t('reject'),msg:t('enter_rejection_reason'),type:'prompt',placeholder:'...',confirmClass:'btn-danger',confirmText:`<i class="fas fa-times"></i> ${t('reject')}`,onConfirm:(reason)=>{
     database.ref(`employees/${eid}/requests/${rid}`).update({ status: 'rejected', notified: false, rejectReason: reason||'' }).then(() => {
         database.ref('notifications').push({ type: 'request_response', employeeId: eid, status: 'rejected', rejectReason: reason||'', date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: true });
-        showToast(t('alert_request_rejected'), 'warning'); updateNotificationBadge();
+        showToast(t('alert_request_rejected'), 'warning'); updateNotificationBadge(); updateStats();
+        // أعد تحميل نافذة الطلبات إن كانت مفتوحة
+        const modal = document.getElementById('adminRequestsSummaryModal');
+        if (modal) { modal.remove(); showRequestsSummary(); }
     });
     }});
 };
