@@ -35,21 +35,20 @@ messaging.onBackgroundMessage(payload => {
 // ─── نقر على الإشعار ───
 self.addEventListener('notificationclick', e => {
     e.notification.close();
-    // استخرج الرابط من data
-    const url = e.notification.data?.url 
-              || e.notification.data 
-              || 'https://chadistil.github.io/bse/BCElectric.html';
+    const data = e.notification.data || {};
+    const url = data.url || 'https://chadistil.github.io/bse/BCElectric.html';
+    const callId = data.callId || null;
+    const tag = e.notification.tag || '';
+
     e.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
-            // إذا التطبيق مفتوح — ركّز عليه وأرسل له الرابط
             for (const c of cs) {
                 if (c.url.includes('BCElectric')) {
                     c.focus();
-                    c.postMessage({ type: 'NOTIF_CLICK', url });
+                    c.postMessage({ type: 'NOTIF_CLICK', url, callId });
                     return;
                 }
             }
-            // إذا مغلق — افتحه
             return clients.openWindow(url);
         })
     );
