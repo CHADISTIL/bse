@@ -22,25 +22,35 @@ messaging.onBackgroundMessage(payload => {
 
     return self.registration.showNotification(title, {
         body,
-        icon:  '/bse/icon-192.png',
-        badge: '/bse/icon-72.png',
+        icon:  'https://chadistil.github.io/bse/icon-192.png',
+        badge: 'https://chadistil.github.io/bse/icon-72.png',
         tag,
         dir:   'rtl',
         vibrate: [200, 100, 200],
-        requireInteraction: payload.data?.requireInteraction === 'true',
-        data: payload.data?.url || '/bse/BCElectric.html'
+        requireInteraction: payload.data?.requireInteraction !== 'false',
+        data: { url: payload.data?.url || 'https://chadistil.github.io/bse/BCElectric.html' }
     });
 });
 
 // ─── نقر على الإشعار ───
 self.addEventListener('notificationclick', e => {
     e.notification.close();
+    // استخرج الرابط من data
+    const url = e.notification.data?.url 
+              || e.notification.data 
+              || 'https://chadistil.github.io/bse/BCElectric.html';
     e.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+            // إذا التطبيق مفتوح — ركّز عليه وأرسل له الرابط
             for (const c of cs) {
-                if (c.url.includes('BCElectric') && 'focus' in c) return c.focus();
+                if (c.url.includes('BCElectric')) {
+                    c.focus();
+                    c.postMessage({ type: 'NOTIF_CLICK', url });
+                    return;
+                }
             }
-            return clients.openWindow(e.notification.data || '/bse/BCElectric.html');
+            // إذا مغلق — افتحه
+            return clients.openWindow(url);
         })
     );
 });
