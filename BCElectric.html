@@ -1211,7 +1211,7 @@
     <div id="welcomePage">
         <div class="welcome-card">
             <div class="welcome-icon" style="background:none;box-shadow:none;padding:0;width:140px;height:140px;margin:0 auto;">
-    <img src="https://i.suar.me/8zzNO/m" alt="BC Electric" style="width:140px;height:140px;border-radius:28px;object-fit:cover;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
+    <img src="https://i.suar.me/8zzNO/m" alt="BC Electric" style="width:140px;height:140px;border-radius:35px;object-fit:cover;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
 
 </div>
             <h1 class="welcome-title" data-i18n="app_title">BC Electric</h1>
@@ -7491,25 +7491,29 @@ function getAudioCtx() {
 // ─── صوت الرنين (للمستقبل) ───
 function startRinging() {
     stopAllSounds();
-    const ctx = getAudioCtx();
-    function ring() {
-        // نغمة هاتف كلاسيكية: تردد مزدوج
-        const t = ctx.currentTime;
-        [440, 480].forEach((freq, i) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
-            gain.gain.setValueAtTime(0.3, t + 0.4);
-            gain.gain.linearRampToValueAtTime(0, t + 0.5);
-            osc.start(t); osc.stop(t + 0.5);
-        });
-    }
-    ring();
-    _ringingInterval = setInterval(ring, 1200);
+    // AudioContext يحتاج تفاعل المستخدم — نحاول ونتجاهل الخطأ إذا لم يكن متاحاً
+    try {
+        const ctx = getAudioCtx();
+        function ring() {
+            try {
+                const t = ctx.currentTime;
+                [440, 480].forEach(freq => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0, t);
+                    gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+                    gain.gain.setValueAtTime(0.3, t + 0.4);
+                    gain.gain.linearRampToValueAtTime(0, t + 0.5);
+                    osc.start(t); osc.stop(t + 0.5);
+                });
+            } catch(e) {}
+        }
+        ring();
+        _ringingInterval = setInterval(ring, 1200);
+    } catch(e) { console.warn('Audio not available:', e); }
 }
 
 // ─── صوت الانتظار (للمتصل) ───
@@ -7820,26 +7824,22 @@ function showCallModal(type) {
 
 // ─── استمع للمكالمات الواردة ───
 function listenForIncomingCalls() {
+    if (window._callListener) return; // لا تضيف مستمعاً مزدوجاً
     const myId = isAdmin ? 'admin' : String(currentEmpId);
-    // استمع للمكالمات الواردة
-    database.ref('calls').orderByChild('receiverId').equalTo(myId).on('child_added', snap => {
+    window._callListener = database.ref('calls').orderByChild('receiverId').equalTo(myId);
+    window._callListener.on('child_added', snap => {
         const call = snap.val();
         if (!call || call.status !== 'ringing') return;
-        // تجاهل المكالمات القديمة (أكثر من 30 ثانية)
-        if (Date.now() - (call.timestamp || 0) > 30000) return;
-        window._pendingCall = { callId: snap.key, callerName: call.callerName, callType: call.type };
-        // إظهار بانر المكالمة الواردة
+        if (Date.now() - (call.timestamp || 0) > 30000) return; // أقدم من 30 ثانية
+        window._pendingCall = { callId: snap.key, callerName: call.callerName, callType: call.type || 'audio' };
         document.getElementById('incomingCallName').textContent = call.callerName || t('incoming_call') || 'مكالمة واردة';
         document.getElementById('incomingCallType').textContent = call.type === 'video' ? (t('video_call')||'Video Call') : (t('audio_call')||'Audio Call');
         document.getElementById('incomingCallIcon').className = call.type === 'video' ? 'fas fa-video' : 'fas fa-phone';
-        const b=document.getElementById('incomingCallBanner'); b.style.display='flex'; b.style.pointerEvents='auto';
-        startRinging(); // نغمة رنين للمستقبل
-        // أخفِ البانر بعد 30 ثانية
-        // أخفِ البانر بعد 30 ثانية إذا لم يرد
-        setTimeout(() => {
-            const b2 = document.getElementById('incomingCallBanner');
-            if (b2.style.display !== 'none') rejectCall();
-        }, 30000);
+        const b = document.getElementById('incomingCallBanner');
+        b.style.display = 'flex';
+        b.style.pointerEvents = 'auto';
+        startRinging();
+        setTimeout(() => { if (b.style.display !== 'none') rejectCall(); }, 30000);
     });
 }
 
