@@ -1192,7 +1192,7 @@
         /* شريط أخبار متحرك للنقاط */
             .summary-grid { grid-template-columns:repeat(2,1fr); }
             .profile-avatar { width:72px; height:72px; }
-            .closed-account-stats { grid-template-columns:repeat(2,1fr); } 
+            .closed-account-stats { grid-template-columns:repeat(2,1fr); }
         }
 
     /* ─── Call Styles ─── */
@@ -1211,7 +1211,7 @@
     <div id="welcomePage">
         <div class="welcome-card">
             <div class="welcome-icon" style="background:none;box-shadow:none;padding:0;width:140px;height:140px;margin:0 auto;">
-    <img src="https://i.suar.me/6zzv5/m" alt="BC Electric" style="width:140px;height:140px;border-radius:28px;object-fit:cover;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
+    <img src="https://i.suar.me/8zzNO/m" alt="BC Electric" style="width:140px;height:140px;border-radius:28px;object-fit:cover;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
 
 </div>
             <h1 class="welcome-title" data-i18n="app_title">BC Electric</h1>
@@ -3690,7 +3690,28 @@ function showAdminUI() {
     document.getElementById('welcomePage').style.display = 'none';
     document.getElementById('employeeProfilePage').style.display = 'none';
     // تشغيل مستمع إشعارات الهاتف
-    setTimeout(() => { _lastNotifTime = Date.now(); startFirebaseNotifListener(); subscribeToPush(); }, 1000);
+    setTimeout(() => {
+        _lastNotifTime = Date.now();
+        startFirebaseNotifListener();
+        subscribeToPush();
+        getFCMToken();
+        listenForIncomingCalls();
+        if (window._pendingCallFromURL) {
+            const p = window._pendingCallFromURL; window._pendingCallFromURL = null;
+            database.ref(`calls/${p.callId}`).once('value', snap => {
+                const call = snap.val();
+                if (call && call.status === 'ringing') {
+                    window._pendingCall = { callId: p.callId, callerName: p.callerName || call.callerName, callType: p.callType || call.type };
+                    document.getElementById('incomingCallName').textContent = window._pendingCall.callerName;
+                    document.getElementById('incomingCallType').textContent = window._pendingCall.callType === 'video' ? (t('video_call')||'Video Call') : (t('audio_call')||'Audio Call');
+                    document.getElementById('incomingCallIcon').className = window._pendingCall.callType === 'video' ? 'fas fa-video' : 'fas fa-phone';
+                    const b = document.getElementById('incomingCallBanner');
+                    b.style.display = 'flex'; b.style.pointerEvents = 'auto';
+                    startRinging();
+                }
+            });
+        }
+    }, 1000);
     document.getElementById('adminHeader').style.display = 'block';
     document.getElementById('addBtn').style.display = 'flex';
     const supBtn = document.getElementById('adminSettingsSupervisorBtn');
@@ -3724,7 +3745,29 @@ function showEmployeeUI() {
     document.getElementById('addBtn').style.display = 'none';
     updateEmployeeProfile(); renderDirectHistory(); updateNotificationBadge();
     // تشغيل مستمع إشعارات الهاتف للموظف
-    setTimeout(() => { _lastNotifTime = Date.now(); startFirebaseNotifListener(); if(currentEmpData) scheduleMonthEndWarning(currentEmpData); subscribeToPush(); }, 1200);
+    setTimeout(() => {
+        _lastNotifTime = Date.now();
+        startFirebaseNotifListener();
+        subscribeToPush();
+        getFCMToken();
+        listenForIncomingCalls();
+        if(currentEmpData) scheduleMonthEndWarning(currentEmpData);
+        if (window._pendingCallFromURL) {
+            const p = window._pendingCallFromURL; window._pendingCallFromURL = null;
+            database.ref(`calls/${p.callId}`).once('value', snap => {
+                const call = snap.val();
+                if (call && call.status === 'ringing') {
+                    window._pendingCall = { callId: p.callId, callerName: p.callerName || call.callerName, callType: p.callType || call.type };
+                    document.getElementById('incomingCallName').textContent = window._pendingCall.callerName;
+                    document.getElementById('incomingCallType').textContent = window._pendingCall.callType === 'video' ? (t('video_call')||'Video Call') : (t('audio_call')||'Audio Call');
+                    document.getElementById('incomingCallIcon').className = window._pendingCall.callType === 'video' ? 'fas fa-video' : 'fas fa-phone';
+                    const b = document.getElementById('incomingCallBanner');
+                    b.style.display = 'flex'; b.style.pointerEvents = 'auto';
+                    startRinging();
+                }
+            });
+        }
+    }, 1200);
     // popup الحصص المعلقة فور الدخول
     setTimeout(() => checkAndShowSharePopup(), 900);
     // نافذة أول الشهر للموظف
@@ -5149,7 +5192,12 @@ function getNotifMessage(n) {
         case 'bonus_granted':
             return `${t('notif_bonus_granted')||'You received a bonus of'} ${n.amount||0} ${t('amount')} — ${n.reason||''}`;
         case 'new_message':
-            return n.sender==='admin' ? `${t('notif_message_from_admin')||'Message from Admin'}: ${n.message||''}` : `${t('notif_message_from_employee')||'Message from Employee'}: ${n.message||''}`;
+            if (n.sender === 'admin') {
+                return `${t('notif_message_from_admin')||'Admin'}: ${n.message||''}`;
+            } else {
+                const senderName = n.employeeName || t('employee') || 'Employee';
+                return `${senderName}: ${n.message||''}`;
+            }
         case 'new_request':
             return `${t('notif_new_request')||'New request from'} ${n.employeeName||''}: ${n.requestType||''}`;
         case 'request_response':
@@ -5162,8 +5210,10 @@ function getNotifMessage(n) {
             return `${t('notif_share_edited_admin')||'Your share in special work was updated — New amount'}: ${n.newAmount||0} ${t('amount')}`;
         case 'share_rejected':
             return `${n.rejectorName||t('a_participant')||'A participant'} ${t('rejected_share_adjustment')||'rejected the share adjustment proposal'}`;
+        case 'incoming_call':
+            return `${n.callerName||t('admin')||'Admin'} — ${n.callType==='video' ? t('video_call')||'Video Call' : t('audio_call')||'Audio Call'}`;
         default:
-            return n.message || n.type || t('new_notification')||'New notification';
+            return n.message || t('new_notification') || 'New notification';
     }
 }
 
@@ -7068,6 +7118,17 @@ console.log('✅ BC Electric v1.0 — PWA | Push Notifications | Negative Points
 // ═══════════════════════════════════════════════════════════════
 let _swReady = false;
 
+// ─── معالجة URL عند فتح الصفحة من إشعار مكالمة ───
+(function handleCallFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    const callId = params.get('callId');
+    if (!callId) return;
+    const callType = params.get('callType') || 'audio';
+    const callerName = decodeURIComponent(params.get('callerName') || '');
+    // انتظر حتى يتم تسجيل الدخول ثم اعرض شاشة المكالمة
+    window._pendingCallFromURL = { callId, callType, callerName };
+})();
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').then(reg => {
@@ -7239,29 +7300,17 @@ function _doShowNotif(title, body, tag, requireInteraction) {
 let _lastNotifTime = Date.now();
 function startFirebaseNotifListener() {
     if (!currentEmpId && !isAdmin) return;
-    database.ref('notifications').orderByChild('time').limitToLast(10).on('child_added', (snap) => {
+    database.ref('notifications').orderByChild('timestamp').limitToLast(20).on('child_added', (snap) => {
         const n = snap.val();
-        if (!n || !n.time) return;
-        // تجاهل الإشعارات القديمة (فقط الجديدة بعد تشغيل التطبيق)
-        const notifMs = new Date(`${n.date || today} ${n.time || '00:00'}`.replace(' ', 'T')).getTime();
-        if (notifMs < _lastNotifTime - 5000) return;
-        const isForMe = isAdmin ? n.forAdmin : (n.forEmployee && n.employeeId === currentEmpId);
+        if (!n) return;
+        // تجاهل الإشعارات القديمة — استخدم timestamp مباشرة
+        const notifMs = n.timestamp || 0;
+        if (notifMs > 0 && notifMs < _lastNotifTime - 5000) return;
+        const myId = isAdmin ? 'admin' : currentEmpId;
+        const isForMe = isAdmin ? n.forAdmin : (n.forEmployee && String(n.employeeId) === String(currentEmpId));
         if (!isForMe) return;
         const msg = getNotifMessage ? getNotifMessage(n) : (n.message || '');
-        const titles = {
-            attendance_recorded: '✅ تم تسجيل الحضور',
-            attendance_edited: '✏️ تعديل سجل الحضور',
-            attendance_deleted: '🗑️ حذف سجل الحضور',
-            payment_recorded: '💰 دفعة جديدة',
-            bonus_granted: '🎁 مكافأة جديدة',
-            new_message: '💬 رسالة جديدة',
-            new_request: '📋 طلب جديد',
-            request_response: '📩 رد على طلبك',
-            special_work_added: '⭐ عمل خاص',
-            share_settled: '🤝 توزيع الحصص',
-            negative_points_warning: '⚠️ تحذير نقاط',
-        };
-        const title = titles[n.type] || 'BC Electric';
+        const title = getTitle ? getTitle(n.type, currentLang) : (n.type || 'BC Electric');
         showLocalNotification(title, msg, snap.key);
     });
 }
@@ -7360,41 +7409,63 @@ window.addEventListener('appinstalled', () => {
 });
 
 // ─── استقبال نقر الإشعار من SW ───
-navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', e => {
-    if (e.data?.type === 'NOTIF_CLICK') {
-        const url = e.data.url || '';
-        if (url.includes('#call')) {
-            // افتح شاشة استقبال المكالمة
-            const callId = e.data.callId || null;
-            if (callId) {
-                database.ref(`calls/${callId}`).once('value', snap => {
-                    const call = snap.val();
-                    if (call && call.status === 'ringing') {
-                        window._pendingCall = { callId, callerName: call.callerName, callType: call.type };
-                        const b = document.getElementById('incomingCallBanner');
-                        document.getElementById('incomingCallName').textContent = call.callerName || '';
-                        document.getElementById('incomingCallType').textContent = call.type === 'video' ? t('video_call') : t('audio_call');
-                        document.getElementById('incomingCallIcon').className = call.type === 'video' ? 'fas fa-video' : 'fas fa-phone';
-                        b.style.display = 'flex'; b.style.pointerEvents = 'auto';
-                        startRinging();
-                    }
-                });
+function handleNotifClickFromSW(url, data) {
+    data = data || {};
+    url = url || '';
+    if (data.tag === 'incoming_call' || url.includes('#call')) {
+        const callId = data.callId;
+        if (!callId) return;
+        database.ref(`calls/${callId}`).once('value', snap => {
+            const call = snap.val();
+            if (call && call.status === 'ringing') {
+                window._pendingCall = { callId, callerName: call.callerName || data.callerName, callType: call.type || data.callType || 'audio' };
+                document.getElementById('incomingCallName').textContent = call.callerName || data.callerName || t('incoming_call');
+                document.getElementById('incomingCallType').textContent = (call.type||data.callType) === 'video' ? (t('video_call')||'Video Call') : (t('audio_call')||'Audio Call');
+                document.getElementById('incomingCallIcon').className = (call.type||data.callType) === 'video' ? 'fas fa-video' : 'fas fa-phone';
+                const b = document.getElementById('incomingCallBanner');
+                b.style.display = 'flex'; b.style.pointerEvents = 'auto';
+                startRinging();
+            } else {
+                showToast(t('call_ended') || 'انتهت المكالمة', 'info');
             }
-        } else if (url.includes('#messages')) {
-            // افتح نافذة الرسائل
-            if (typeof openChat === 'function') openChat();
-            else document.querySelector('[data-tab="messages"]')?.click();
-        } else if (url.includes('#requests')) {
-            if (typeof showRequestsSummary === 'function') showRequestsSummary();
-            else document.querySelector('[data-tab="requests"]')?.click();
-        } else if (url.includes('#attendance')) {
-            if (typeof showTab === 'function') showTab('attendance');
-            else document.querySelector('[data-tab="attendance"]')?.click();
-        } else if (url.includes('#payments')) {
-            if (typeof showTab === 'function') showTab('payments');
-        } else if (url.includes('#notifications')) {
-            if (typeof openNotifications === 'function') openNotifications();
+        });
+        return;
+    }
+    if (url.includes('#messages')) {
+        const empId = data.employeeId;
+        if (isAdmin && empId) {
+            const emp = employees.find(e => String(e.id) === String(empId));
+            if (emp) { currentEmpId = emp.id; currentEmpData = emp; openChat(); return; }
         }
+        openChat();
+    } else if (url.includes('#requests')) {
+        if (isAdmin) showRequestsSummary(); else showRequestsHistoryModal();
+    } else if (url.includes('#attendance')) {
+        if (isAdmin && data.employeeId) {
+            const emp = employees.find(e => String(e.id) === String(data.employeeId));
+            if (emp) { currentEmpId = emp.id; currentEmpData = emp; showEmployeeProfile(emp); }
+        }
+    } else if (url.includes('#notifications')) {
+        openNotifications();
+    }
+}
+
+navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data?.type !== 'NOTIF_CLICK') return;
+    setTimeout(() => handleNotifClickFromSW(e.data.url || '', e.data.data || {}), 600);
+});
+
+// فتح المكالمة من URL parameters عند فتح الصفحة من إشعار
+window.addEventListener('load', () => {
+    const params = new URLSearchParams(window.location.search);
+    const callId = params.get('callId');
+    if (callId) {
+        setTimeout(() => handleNotifClickFromSW('#call', {
+            tag: 'incoming_call',
+            callId,
+            callType: params.get('callType') || 'audio',
+            callerName: decodeURIComponent(params.get('callerName') || '')
+        }), 1500);
     }
 });
 
@@ -7750,6 +7821,7 @@ function showCallModal(type) {
 // ─── استمع للمكالمات الواردة ───
 function listenForIncomingCalls() {
     const myId = isAdmin ? 'admin' : String(currentEmpId);
+    // استمع للمكالمات الواردة
     database.ref('calls').orderByChild('receiverId').equalTo(myId).on('child_added', snap => {
         const call = snap.val();
         if (!call || call.status !== 'ringing') return;
@@ -7757,14 +7829,16 @@ function listenForIncomingCalls() {
         if (Date.now() - (call.timestamp || 0) > 30000) return;
         window._pendingCall = { callId: snap.key, callerName: call.callerName, callType: call.type };
         // إظهار بانر المكالمة الواردة
-        document.getElementById('incomingCallName').textContent = call.callerName || 'مكالمة واردة';
-        document.getElementById('incomingCallType').textContent = call.type === 'video' ? 'مكالمة فيديو' : 'مكالمة صوتية';
+        document.getElementById('incomingCallName').textContent = call.callerName || t('incoming_call') || 'مكالمة واردة';
+        document.getElementById('incomingCallType').textContent = call.type === 'video' ? (t('video_call')||'Video Call') : (t('audio_call')||'Audio Call');
         document.getElementById('incomingCallIcon').className = call.type === 'video' ? 'fas fa-video' : 'fas fa-phone';
         const b=document.getElementById('incomingCallBanner'); b.style.display='flex'; b.style.pointerEvents='auto';
         startRinging(); // نغمة رنين للمستقبل
         // أخفِ البانر بعد 30 ثانية
+        // أخفِ البانر بعد 30 ثانية إذا لم يرد
         setTimeout(() => {
-            if (document.getElementById('incomingCallBanner').style.display !== 'none') rejectCall();
+            const b2 = document.getElementById('incomingCallBanner');
+            if (b2.style.display !== 'none') rejectCall();
         }, 30000);
     });
 }
