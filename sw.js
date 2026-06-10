@@ -1,8 +1,7 @@
-// BC Electric Service Worker v2.0 — FCM + Local Notifications
+// BC Electric Service Worker v3.0
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
-// ─── Firebase Init ───
 firebase.initializeApp({
     apiKey: "AIzaSyC4MIj9F4OVgT-MztP5Kycl3GIBYM7QrEE",
     databaseURL: "https://faddi-410e9-default-rtdb.firebaseio.com",
@@ -13,22 +12,29 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ─── إشعارات الخلفية (التطبيق مغلق أو في الخلفية) ───
+// ─── إشعارات الخلفية ───
 messaging.onBackgroundMessage(payload => {
-    console.log('[SW] Background message:', payload);
     const title = payload.notification?.title || 'BC Electric';
     const body  = payload.notification?.body  || '';
-    const tag   = payload.data?.tag || 'bc-fcm';
+    const data  = payload.data || {};
 
     return self.registration.showNotification(title, {
         body,
         icon:  'https://chadistil.github.io/bse/icon-192.png',
         badge: 'https://chadistil.github.io/bse/icon-72.png',
-        tag,
+        tag:   data.tag || 'bc-fcm',
         dir:   'rtl',
         vibrate: [200, 100, 200],
-        requireInteraction: payload.data?.requireInteraction !== 'false',
-        data: { url: payload.data?.url || 'https://chadistil.github.io/bse/BCElectric.html' }
+        requireInteraction: data.requireInteraction !== 'false',
+        // حفظ كل البيانات لاستخدامها عند النقر
+        data: {
+            url:        data.url        || 'https://chadistil.github.io/bse/BCElectric.html',
+            tag:        data.tag        || '',
+            callId:     data.callId     || '',
+            callType:   data.callType   || '',
+            callerName: data.callerName || '',
+            employeeId: data.employeeId || ''
+        }
     });
 });
 
@@ -36,32 +42,35 @@ messaging.onBackgroundMessage(payload => {
 self.addEventListener('notificationclick', e => {
     e.notification.close();
     const data = e.notification.data || {};
-    const url = data.url || 'https://chadistil.github.io/bse/BCElectric.html';
-    const callId = data.callId || null;
-    const tag = e.notification.tag || '';
+    const url  = data.url || 'https://chadistil.github.io/bse/BCElectric.html';
 
     e.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+            // إذا الصفحة مفتوحة — ركّز وأرسل البيانات
             for (const c of cs) {
                 if (c.url.includes('BCElectric')) {
                     c.focus();
-                    c.postMessage({ type: 'NOTIF_CLICK', url, callId });
+                    c.postMessage({ type: 'NOTIF_CLICK', url, data });
                     return;
                 }
             }
-            return clients.openWindow(url);
+            // إذا مغلقة — افتحها مع البيانات في الـ URL
+            const openUrl = data.callId
+                ? `${url}?callId=${data.callId}&callType=${data.callType}&callerName=${encodeURIComponent(data.callerName)}`
+                : url;
+            return clients.openWindow(openUrl);
         })
     );
 });
 
-// ─── رسائل من التطبيق (إشعارات محلية) ───
+// ─── رسائل من الصفحة ───
 self.addEventListener('message', e => {
     if (e.data?.type === 'SHOW_NOTIFICATION') {
         const { title, body, tag, requireInteraction } = e.data;
         self.registration.showNotification(title, {
             body,
-            icon:  '/bse/icon-192.png',
-            badge: '/bse/icon-72.png',
+            icon:  'https://chadistil.github.io/bse/icon-192.png',
+            badge: 'https://chadistil.github.io/bse/icon-72.png',
             tag:   tag || 'bc-notif',
             dir:   'rtl',
             vibrate: [200, 100, 200],
