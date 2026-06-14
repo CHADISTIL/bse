@@ -66,7 +66,11 @@ self.addEventListener('notificationclick', e => {
 // ─── رسائل من الصفحة ───
 self.addEventListener('message', e => {
     if (e.data?.type === 'SHOW_NOTIFICATION') {
-        const { title, body, tag, requireInteraction } = e.data;
+        const { title, body, tag, requireInteraction, callId, callType, callerName } = e.data;
+        const isCall = tag === 'incoming_call' || !!callId;
+        const url = isCall
+            ? `https://chadistil.github.io/bse/BCElectric.html#call`
+            : `https://chadistil.github.io/bse/BCElectric.html`;
         self.registration.showNotification(title, {
             body,
             icon:  'https://chadistil.github.io/bse/icon-192.png',
@@ -74,7 +78,8 @@ self.addEventListener('message', e => {
             tag:   tag || 'bc-notif',
             dir:   'rtl',
             vibrate: [200, 100, 200],
-            requireInteraction: requireInteraction || false,
+            requireInteraction: isCall ? true : (requireInteraction || false),
+            data: { url, tag: tag || 'bc-notif', callId: callId || '', callType: callType || '', callerName: callerName || '' }
         });
     }
 });
