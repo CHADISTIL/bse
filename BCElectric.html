@@ -7976,9 +7976,8 @@ if (isAdmin) {
     startFirebaseNotifListener();
 }
 
-</script>
-</body>
-</html>function trackOnlinePresence() {
+
+function trackOnlinePresence() {
     const uid = isAdmin ? 'admin' : (currentEmpId ? String(currentEmpId) : null);
     if (!uid) return;
     const presenceRef = database.ref(`presence/${uid}`);
@@ -8018,4 +8017,6 @@ if (isAdmin) {
     }
 }
 
-
+</script>
+</body>
+</html>
