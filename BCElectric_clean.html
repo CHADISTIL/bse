@@ -7946,28 +7946,40 @@ function showOnlineEmployees() {
     const list = document.getElementById('onlineList');
     if (!list) return;
     document.getElementById('onlineModal').style.display = 'flex';
-    const ids = Object.keys(_onlineMap);
-    if (!ids.length) {
-        list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-secondary);"><i class="fas fa-users" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:10px;"></i>${t('no_online_employees')||'لا يوجد موظفون متصلون'}</div>`;
-        return;
-    }
-    list.innerHTML = employees.filter(e => ids.includes(String(e.id))).map(e => `
-    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border-light);">
-        <div style="position:relative;">
-            <img src="${e.img||`https://ui-avatars.com/api/?background=1e2b5a&color=fff&name=${encodeURIComponent(e.name)}`}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;">
-            <div style="position:absolute;bottom:0;left:0;width:12px;height:12px;background:#22c55e;border-radius:50%;border:2px solid white;"></div>
-        </div>
-        <div style="flex:1;">
-            <div style="font-weight:700;">${e.name}</div>
-            <div style="font-size:0.72rem;color:#22c55e;"><i class="fas fa-circle" style="font-size:0.5rem;"></i> متصل الآن</div>
-        </div>
-        <div style="display:flex;gap:6px;">
-            <button class="btn btn-sm" style="background:var(--success-bg);color:var(--success);border:1px solid var(--success);padding:6px 10px;"
-                onclick="closeModal('onlineModal');currentEmpId=${e.id};currentEmpData=employees.find(x=>x.id==${e.id});startCall('audio')"><i class="fas fa-phone"></i></button>
-            <button class="btn btn-sm" style="background:var(--info-bg);color:var(--info);border:1px solid var(--info);padding:6px 10px;"
-                onclick="closeModal('onlineModal');currentEmpId=${e.id};currentEmpData=employees.find(x=>x.id==${e.id});startCall('video')"><i class="fas fa-video"></i></button>
-        </div>
-    </div>`).join('') || `<div style="text-align:center;padding:20px;color:var(--text-secondary);">لا يوجد موظفون متصلون</div>`;
+
+    // اقرأ من Firebase مباشرة عند كل فتح للنافذة
+    database.ref('presence').once('value', snap => {
+        const data = snap.val() || {};
+        // أعد بناء _onlineMap من Firebase
+        Object.keys(_onlineMap).forEach(k => delete _onlineMap[k]);
+        Object.entries(data).forEach(([id, p]) => {
+            if (p?.online) _onlineMap[id] = Date.now();
+        });
+
+        const ids = Object.keys(_onlineMap);
+        if (!ids.length) {
+            list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-secondary);"><i class="fas fa-users" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:10px;"></i>${t('no_online_employees')||'لا يوجد موظفون متصلون'}</div>`;
+            return;
+        }
+        list.innerHTML = employees.filter(e => ids.includes(String(e.id))).map(e => `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border-light);">
+            <div style="position:relative;">
+                <img src="${e.img||`https://ui-avatars.com/api/?background=1e2b5a&color=fff&name=${encodeURIComponent(e.name)}`}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;">
+                <div style="position:absolute;bottom:0;left:0;width:12px;height:12px;background:#22c55e;border-radius:50%;border:2px solid white;"></div>
+            </div>
+            <div style="flex:1;">
+                <div style="font-weight:700;">${e.name}</div>
+                <div style="font-size:0.72rem;color:#22c55e;"><i class="fas fa-circle" style="font-size:0.5rem;"></i> متصل الآن</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button class="btn btn-sm" style="background:var(--success-bg);color:var(--success);border:1px solid var(--success);padding:6px 10px;"
+                    onclick="closeModal('onlineModal');currentEmpId=${e.id};currentEmpData=employees.find(x=>x.id==${e.id});startCall('audio')"><i class="fas fa-phone"></i></button>
+                <button class="btn btn-sm" style="background:var(--info-bg);color:var(--info);border:1px solid var(--info);padding:6px 10px;"
+                    onclick="closeModal('onlineModal');currentEmpId=${e.id};currentEmpData=employees.find(x=>x.id==${e.id});startCall('video')"><i class="fas fa-video"></i></button>
+            </div>
+        </div>`).join('');
+        _updateOnlineBadge();
+    });
 }
 
 
