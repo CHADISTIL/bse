@@ -18,6 +18,13 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     <style>
+        @keyframes voicePulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+        .vmsg{display:flex;align-items:center;gap:10px;min-width:200px;max-width:260px;padding:2px 0 4px;direction:ltr}
+        .vmsg .vp{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;background:rgba(255,255,255,.9);color:#1e3a8a;display:flex;align-items:center;justify-content:center;font-size:0.9rem}
+        .chat-message.admin .vmsg .vp{background:#1e2b5a;color:#fff}
+        .vmsg .vb{flex:1;min-width:0}
+        .vmsg input[type=range]{width:100%;height:4px;margin:6px 0 2px;accent-color:currentColor;cursor:pointer}
+        .vmsg .vt{font-size:0.68rem;opacity:.75;font-variant-numeric:tabular-nums}
         :root {
             --primary: #0f1f4e;
             --primary-mid: #1a3178;
@@ -1202,7 +1209,11 @@
         0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
         50% { box-shadow: 0 0 0 20px rgba(59,130,246,0); }
     }
-    .chat-input-area { display:flex; align-items:center; gap:6px; padding:8px; }
+    .chat-input-area { display:flex; flex-wrap:nowrap; align-items:center; gap:4px; padding:5px 6px; }
+    .chat-input-area .chat-ib { flex:0 0 auto; width:40px; height:40px; padding:0; border:none; border-radius:50%; background:transparent; color:var(--text-mid,#64748b); font-size:1.02rem; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background .15s,color .15s; }
+    .chat-input-area .chat-ib:hover, .chat-input-area .chat-ib:active { background:var(--bg2,#eef2ff); color:var(--primary-mid,#1e3a8a); }
+    .chat-input-area .chat-input { flex:1 1 auto; min-width:0; padding:11px 8px; }
+    .chat-input-area .chat-send { flex:0 0 auto; width:44px; height:44px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:1rem; box-shadow:0 3px 10px rgba(30,58,138,.28); }
     </style>
 </head>
 <body>
@@ -1453,13 +1464,21 @@
                 </div>
             </div>
             <div class="chat-container" id="chatMessagesList"></div>
-            <div class="chat-input-area" style="flex-wrap:wrap;gap:6px;">
-                <label for="fileInput" style="cursor:pointer;padding:8px 10px;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r-sm);font-size:0.85rem;color:var(--text-mid);" title="إرسال ملف">
+            <div class="chat-input-area">
+                <label for="fileInput" class="chat-ib" title="إرسال ملف">
                     <i class="fas fa-paperclip"></i>
                 </label>
                 <input type="file" id="fileInput" style="display:none;" multiple onchange="sendFile(this)">
+                <button type="button" id="micBtn" class="chat-ib" onclick="voiceStart()" title="🎤"><i class="fas fa-microphone"></i></button>
                 <input type="text" id="chatInput" class="chat-input" style="flex:1;" data-ph="type_message_placeholder" placeholder="اكتب رسالتك...">
                 <button class="chat-send" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+                <div id="voiceBar" style="display:none;flex:1;min-width:0;align-items:center;gap:10px;padding:0 2px;">
+                    <button type="button" onclick="voiceCancel()" style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;border:none;background:#fee2e2;color:#dc2626;cursor:pointer;"><i class="fas fa-trash"></i></button>
+                    <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;animation:voicePulse 1s infinite;"></span>
+                    <span id="voiceTime" dir="ltr" style="font-weight:800;font-variant-numeric:tabular-nums;min-width:42px;">0:00</span>
+                    <span id="voiceLbl" style="flex:1;font-size:0.78rem;color:var(--text-secondary);"></span>
+                    <button type="button" class="chat-send" onclick="voiceSend()"><i class="fas fa-paper-plane"></i></button>
+                </div>
             </div>
             <button class="btn btn-outline btn-block btn-sm" style="margin-top:10px; color:var(--danger); border-color:var(--danger);" id="clearChatBtn" onclick="clearChatHistory()">
                 <i class="fas fa-trash-alt"></i> <span data-i18n="clear_chat_history">مسح سجل المحادثة</span>
@@ -3820,9 +3839,9 @@ Object.assign(localization.fr, { set_cloud_row: 'Stockage des fichiers (Cloudina
 Object.assign(localization.ar, { special_work_type: 'نوع العمل', special_work_type_ph: 'مثال: تركيب إنارة (اختياري)', edit_record: 'تعديل السجل', shares_total_warn: 'مجموع الحصص يتجاوز المبلغ الكلي' });
 Object.assign(localization.en, { special_work_type: 'Work type', special_work_type_ph: 'e.g. Lighting installation (optional)', edit_record: 'Edit record', shares_total_warn: 'Shares total exceeds the overall amount' });
 Object.assign(localization.fr, { special_work_type: 'Type de travail', special_work_type_ph: 'ex. : Installation d\'éclairage (facultatif)', edit_record: 'Modifier l\'enregistrement', shares_total_warn: 'Le total des parts dépasse le montant global' });
-Object.assign(localization.ar, { acc_closed_title: 'تم إغلاق الحساب وتسديد المستحقات', acc_closed_sub: 'سُجّلت الدفعة وأُغلق الحساب بنجاح', acc_closed_emp: 'الموظف', acc_closed_date: 'تاريخ الإغلاق', acc_closed_earned: 'إجمالي المستحقات', acc_closed_paid: 'إجمالي المسحوبات', acc_closed_exp: 'المصروفات', acc_closed_settled: 'المبلغ المسدّد', acc_closed_rem: 'المتبقي بعد الإغلاق', acc_closed_view: 'عرض كشف PDF', acc_closed_done: 'تم', payslip_title: 'كشف الحساب الشهري', payslip_month: 'اختر الشهر', payslip_preview: 'معاينة الكشف', payslip_save: 'طباعة / حفظ PDF', payslip_btn: 'كشف PDF', payslip_dl: 'تنزيل PDF', payslip_print: 'طباعة', payslip_tag_open: 'الشهر الحالي', payslip_tag_unclosed: 'غير مغلق', payslip_tag_closed: 'سجل الدفعات', payslip_pay: 'دفعة', payslip_ctl: 'التحكم في عرض الكشوف', payslip_acc_open: 'إظهار كشف الشهر الحالي', payslip_acc_months: 'إظهار كشوف كل الأشهر (غير المغلقة)', payslip_lang_lbl: 'لغة الكشف', payslip_acc_closed: 'إظهار كشف سجل الدفعات', payslip_dl_fail: 'تعذر إنشاء الملف، جرّب زر الطباعة', payslip_lang: 'لغة الكشف', payslip_none: 'لا يوجد كشف متاح بعد', payslip_set_row: 'إظهار كشف الشهر الحالي للموظفين', payslip_open_on: 'تم إخفاء كشف الشهر الحالي عن الموظفين', payslip_open_off: 'أصبح كشف الشهر الحالي ظاهراً للموظفين' });
-Object.assign(localization.en, { acc_closed_title: 'Account closed and dues settled', acc_closed_sub: 'The payment was recorded and the account closed successfully', acc_closed_emp: 'Employee', acc_closed_date: 'Closing date', acc_closed_earned: 'Total earnings', acc_closed_paid: 'Total withdrawals', acc_closed_exp: 'Expenses', acc_closed_settled: 'Amount settled', acc_closed_rem: 'Remaining after closing', acc_closed_view: 'View PDF statement', acc_closed_done: 'Done', payslip_title: 'Monthly statement', payslip_month: 'Select month', payslip_preview: 'Preview statement', payslip_save: 'Print / Save PDF', payslip_btn: 'PDF Statement', payslip_dl: 'Download PDF', payslip_print: 'Print', payslip_tag_open: 'Current month', payslip_tag_unclosed: 'Not closed', payslip_tag_closed: 'Payments record', payslip_pay: 'Payment', payslip_ctl: 'Statement visibility', payslip_acc_open: 'Show current-month statement', payslip_acc_months: 'Show all months (not closed)', payslip_lang_lbl: 'Statement language', payslip_acc_closed: 'Show payments-record statement', payslip_dl_fail: 'Could not create the file, try Print', payslip_lang: 'Statement language', payslip_none: 'No statement available yet', payslip_set_row: 'Show current-month statement to employees', payslip_open_on: 'Current-month statement hidden from employees', payslip_open_off: 'Current-month statement is now visible to employees' });
-Object.assign(localization.fr, { acc_closed_title: 'Compte clôturé et dû réglé', acc_closed_sub: 'Le paiement a été enregistré et le compte clôturé avec succès', acc_closed_emp: 'Employé', acc_closed_date: 'Date de clôture', acc_closed_earned: 'Total des gains', acc_closed_paid: 'Total des retraits', acc_closed_exp: 'Dépenses', acc_closed_settled: 'Montant réglé', acc_closed_rem: 'Reste après clôture', acc_closed_view: 'Voir le relevé PDF', acc_closed_done: 'Terminé', payslip_title: 'Relevé mensuel', payslip_month: 'Choisir le mois', payslip_preview: 'Aperçu du relevé', payslip_save: 'Imprimer / Enregistrer PDF', payslip_btn: 'Relevé PDF', payslip_dl: 'Télécharger PDF', payslip_print: 'Imprimer', payslip_tag_open: 'Mois en cours', payslip_tag_unclosed: 'Non clôturé', payslip_tag_closed: 'Registre des paiements', payslip_pay: 'Paiement', payslip_ctl: 'Visibilité des relevés', payslip_acc_open: 'Afficher le relevé du mois en cours', payslip_acc_months: 'Afficher tous les mois (non clôturés)', payslip_lang_lbl: 'Langue du relevé', payslip_acc_closed: 'Afficher le relevé du registre des paiements', payslip_dl_fail: 'Impossible de créer le fichier, essayez Imprimer', payslip_lang: 'Langue du relevé', payslip_none: 'Aucun relevé disponible pour le moment', payslip_set_row: 'Afficher le relevé du mois en cours aux employés', payslip_open_on: 'Relevé du mois en cours masqué pour les employés', payslip_open_off: 'Le relevé du mois en cours est visible pour les employés' });
+Object.assign(localization.ar, { voice_rec: 'تسجيل رسالة صوتية', voice_recording: 'جارٍ التسجيل…', voice_send: 'إرسال', voice_cancel: 'إلغاء', voice_msg: 'رسالة صوتية', voice_denied: 'لا يمكن الوصول إلى الميكروفون. اسمح بالوصول من إعدادات المتصفح', voice_unsupported: 'التسجيل الصوتي غير مدعوم على هذا الجهاز', voice_too_big: 'التسجيل طويل جداً، سجّل رسالة أقصر', voice_play: 'تشغيل', voice_fail: 'تعذر تشغيل الرسالة الصوتية', acc_closed_title: 'تم إغلاق الحساب وتسديد المستحقات', acc_closed_sub: 'سُجّلت الدفعة وأُغلق الحساب بنجاح', acc_closed_emp: 'الموظف', acc_closed_date: 'تاريخ الإغلاق', acc_closed_earned: 'إجمالي المستحقات', acc_closed_paid: 'إجمالي المسحوبات', acc_closed_exp: 'المصروفات', acc_closed_settled: 'المبلغ المسدّد', acc_closed_rem: 'المتبقي بعد الإغلاق', acc_closed_view: 'عرض كشف PDF', acc_closed_done: 'تم', payslip_title: 'كشف الحساب الشهري', payslip_month: 'اختر الشهر', payslip_preview: 'معاينة الكشف', payslip_save: 'طباعة / حفظ PDF', payslip_btn: 'كشف PDF', payslip_dl: 'تنزيل PDF', payslip_print: 'طباعة', payslip_tag_open: 'الشهر الحالي', payslip_tag_unclosed: 'غير مغلق', payslip_tag_closed: 'سجل الدفعات', payslip_pay: 'دفعة', payslip_ctl: 'التحكم في عرض الكشوف', payslip_acc_open: 'إظهار كشف الشهر الحالي', payslip_acc_months: 'إظهار كشوف كل الأشهر (غير المغلقة)', payslip_lang_lbl: 'لغة الكشف', payslip_acc_closed: 'إظهار كشف سجل الدفعات', payslip_dl_fail: 'تعذر إنشاء الملف، جرّب زر الطباعة', payslip_lang: 'لغة الكشف', payslip_none: 'لا يوجد كشف متاح بعد', payslip_set_row: 'إظهار كشف الشهر الحالي للموظفين', payslip_open_on: 'تم إخفاء كشف الشهر الحالي عن الموظفين', payslip_open_off: 'أصبح كشف الشهر الحالي ظاهراً للموظفين' });
+Object.assign(localization.en, { voice_rec: 'Record a voice message', voice_recording: 'Recording…', voice_send: 'Send', voice_cancel: 'Cancel', voice_msg: 'Voice message', voice_denied: 'Microphone access denied. Allow it in your browser settings', voice_unsupported: 'Voice recording is not supported on this device', voice_too_big: 'The recording is too long, record a shorter message', voice_play: 'Play', voice_fail: 'Could not play the voice message', acc_closed_title: 'Account closed and dues settled', acc_closed_sub: 'The payment was recorded and the account closed successfully', acc_closed_emp: 'Employee', acc_closed_date: 'Closing date', acc_closed_earned: 'Total earnings', acc_closed_paid: 'Total withdrawals', acc_closed_exp: 'Expenses', acc_closed_settled: 'Amount settled', acc_closed_rem: 'Remaining after closing', acc_closed_view: 'View PDF statement', acc_closed_done: 'Done', payslip_title: 'Monthly statement', payslip_month: 'Select month', payslip_preview: 'Preview statement', payslip_save: 'Print / Save PDF', payslip_btn: 'PDF Statement', payslip_dl: 'Download PDF', payslip_print: 'Print', payslip_tag_open: 'Current month', payslip_tag_unclosed: 'Not closed', payslip_tag_closed: 'Payments record', payslip_pay: 'Payment', payslip_ctl: 'Statement visibility', payslip_acc_open: 'Show current-month statement', payslip_acc_months: 'Show all months (not closed)', payslip_lang_lbl: 'Statement language', payslip_acc_closed: 'Show payments-record statement', payslip_dl_fail: 'Could not create the file, try Print', payslip_lang: 'Statement language', payslip_none: 'No statement available yet', payslip_set_row: 'Show current-month statement to employees', payslip_open_on: 'Current-month statement hidden from employees', payslip_open_off: 'Current-month statement is now visible to employees' });
+Object.assign(localization.fr, { voice_rec: 'Enregistrer un message vocal', voice_recording: 'Enregistrement…', voice_send: 'Envoyer', voice_cancel: 'Annuler', voice_msg: 'Message vocal', voice_denied: 'Accès au micro refusé. Autorisez-le dans les réglages du navigateur', voice_unsupported: 'L\'enregistrement vocal n\'est pas pris en charge sur cet appareil', voice_too_big: 'L\'enregistrement est trop long, enregistrez un message plus court', voice_play: 'Lire', voice_fail: 'Impossible de lire le message vocal', acc_closed_title: 'Compte clôturé et dû réglé', acc_closed_sub: 'Le paiement a été enregistré et le compte clôturé avec succès', acc_closed_emp: 'Employé', acc_closed_date: 'Date de clôture', acc_closed_earned: 'Total des gains', acc_closed_paid: 'Total des retraits', acc_closed_exp: 'Dépenses', acc_closed_settled: 'Montant réglé', acc_closed_rem: 'Reste après clôture', acc_closed_view: 'Voir le relevé PDF', acc_closed_done: 'Terminé', payslip_title: 'Relevé mensuel', payslip_month: 'Choisir le mois', payslip_preview: 'Aperçu du relevé', payslip_save: 'Imprimer / Enregistrer PDF', payslip_btn: 'Relevé PDF', payslip_dl: 'Télécharger PDF', payslip_print: 'Imprimer', payslip_tag_open: 'Mois en cours', payslip_tag_unclosed: 'Non clôturé', payslip_tag_closed: 'Registre des paiements', payslip_pay: 'Paiement', payslip_ctl: 'Visibilité des relevés', payslip_acc_open: 'Afficher le relevé du mois en cours', payslip_acc_months: 'Afficher tous les mois (non clôturés)', payslip_lang_lbl: 'Langue du relevé', payslip_acc_closed: 'Afficher le relevé du registre des paiements', payslip_dl_fail: 'Impossible de créer le fichier, essayez Imprimer', payslip_lang: 'Langue du relevé', payslip_none: 'Aucun relevé disponible pour le moment', payslip_set_row: 'Afficher le relevé du mois en cours aux employés', payslip_open_on: 'Relevé du mois en cours masqué pour les employés', payslip_open_off: 'Le relevé du mois en cours est visible pour les employés' });
 function sp(k) { return (SUSP_TXT[currentLang] || SUSP_TXT.ar)[k] || SUSP_TXT.ar[k] || k; }
 Object.keys(SUSP_TXT).forEach(l => Object.assign(PUSH_TITLES[l], {
     susp_msg_new: { ar: '💬 رسالة من موظف معلّق', en: '💬 Suspended employee message', fr: '💬 Message d\'un employé suspendu' }[l],
@@ -8023,6 +8042,7 @@ function openChat(suspId) {
     document.getElementById('clearChatBtn').style.display = isAdmin ? 'block' : 'none';
     document.querySelectorAll('#chatModal button[onclick^="startCall"]').forEach(b => { b.style.display = susp ? 'none' : ''; });
     const fl = document.querySelector('#chatModal label[for="fileInput"]'); if (fl) fl.style.display = susp ? 'none' : '';
+    const mb = document.getElementById('micBtn'); if (mb) mb.style.display = (susp || !window.MediaRecorder || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) ? 'none' : '';
     document.getElementById('chatModal').style.display = 'flex';
     loadMessages();
 }
@@ -8068,7 +8088,7 @@ window.openImageViewer = function(url, name) {
 function showMessageMenu(m) {
     document.getElementById('msgMenu')?.remove();
     const items = [];
-    if (m.type !== 'image' && m.type !== 'file' && m.text) items.push(`<button class="btn btn-outline btn-block" style="margin-bottom:8px;" id="msgMenuCopy"><i class="fas fa-copy"></i> ${t('copy_text')}</button>`);
+    if (m.type !== 'image' && m.type !== 'file' && m.type !== 'audio' && m.text) items.push(`<button class="btn btn-outline btn-block" style="margin-bottom:8px;" id="msgMenuCopy"><i class="fas fa-copy"></i> ${t('copy_text')}</button>`);
     if (isAdmin) items.push(`<button class="btn btn-danger btn-block" style="margin-bottom:8px;" id="msgMenuDel"><i class="fas fa-trash"></i> ${t('delete') || 'حذف'}</button>`);
     if (!items.length) return;
     const o = document.createElement('div');
@@ -8160,10 +8180,13 @@ function loadMessages() {
                     <div><div style="font-size:0.85rem;font-weight:600;">${puEsc(m.fileName||t('file_label'))}</div><div style="font-size:0.72rem;opacity:0.7;">${m.fileSize||''}</div></div>
                     <i class="fas fa-download" style="margin-right:auto;opacity:0.7;"></i>
                 </a>`;
+            } else if (m.type === 'audio') {
+                inner = `<div class="vmsg" data-src="${puEsc(m.fileData || '')}" data-dur="${Number(m.duration) || 0}"><button type="button" class="vp" aria-label="${t('voice_play')}"><i class="fas fa-play"></i></button><div class="vb"><input type="range" min="0" max="1000" value="0"><div class="vt">0:00 / ${voiceFmt(m.duration)}</div></div><i class="fas fa-microphone" style="opacity:.5;font-size:.8rem;"></i></div>`;
             } else {
                 inner = puEsc(m.text || '');
             }
             div.innerHTML = `${inner}<small><i class="fas fa-clock"></i> ${fmtMsgDate(m)}</small>`;
+            const vm = div.querySelector('.vmsg'); if (vm) voiceBind(vm);
             const im = div.querySelector('.chat-img');
             if (im) { im.src = m.fileData; im.onclick = () => { if (div._lp) return; openImageViewer(m.fileData, m.fileName); }; }
             d.appendChild(div);
@@ -8209,6 +8232,82 @@ function sendMessage() {
         database.ref(`employees/${chatEmpId()}/messages/${id}`).set({ id, text: txt, sender: s, time: new Date().toLocaleTimeString('en-GB'), timestamp: Date.now(), read: false }),
         database.ref('notifications').push({ type: 'new_message', employeeId: chatEmpId(), message: txt, sender: s, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: s==='admin', forAdmin: s==='employee' })
     ]).then(() => { document.getElementById('chatInput').value = ''; });
+}
+// ═══ الرسائل الصوتية ═══
+let _vr = null;
+const VOICE_MAX_S = 180;
+function voiceFmt(sec) { sec = Math.max(0, Math.round(Number(sec) || 0)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+function voiceUI(rec) {
+    const bar = document.getElementById('voiceBar'), area = document.querySelector('#chatModal .chat-input-area'); if (!bar || !area) return;
+    [...area.children].forEach(c => { if (c !== bar) c.style.display = rec ? 'none' : ''; });
+    bar.style.display = rec ? 'flex' : 'none';
+    document.getElementById('voiceLbl').textContent = rec ? t('voice_recording') : '';
+    if (!rec) { const mb = document.getElementById('micBtn'); if (mb && (!window.MediaRecorder || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia))) mb.style.display = 'none'; }
+}
+async function voiceStart() {
+    if (_vr) return;
+    if (!window.MediaRecorder || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { showToast(t('voice_unsupported'), 'warning'); return; }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+    catch (e) { showToast(t('voice_denied'), 'warning'); return; }
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+    let rec;
+    try { rec = new MediaRecorder(stream, Object.assign(mime ? { mimeType: mime } : {}, { audioBitsPerSecond: 24000 })); }
+    catch (e) { stream.getTracks().forEach(x => x.stop()); showToast(t('voice_unsupported'), 'warning'); return; }
+    const v = { rec, chunks: [], stream, t0: Date.now(), mime: rec.mimeType || mime || 'audio/webm', cancelled: false, send: false };
+    _vr = v;
+    rec.ondataavailable = ev => { if (ev.data && ev.data.size) v.chunks.push(ev.data); };
+    rec.onstop = () => voiceFinish(v);
+    rec.start(500);
+    voiceUI(true); document.getElementById('voiceTime').textContent = '0:00';
+    v.timer = setInterval(() => {
+        if (_vr !== v) return;
+        const el = Math.floor((Date.now() - v.t0) / 1000);
+        document.getElementById('voiceTime').textContent = voiceFmt(el);
+        const cm = document.getElementById('chatModal');
+        if (!cm || cm.style.display === 'none') voiceCancel();
+        else if (el >= VOICE_MAX_S) voiceSend();
+    }, 250);
+}
+function voiceStop(v) { try { clearInterval(v.timer); } catch (e) {} try { if (v.rec.state !== 'inactive') v.rec.stop(); } catch (e) {} try { v.stream.getTracks().forEach(x => x.stop()); } catch (e) {} }
+function voiceCancel() { if (!_vr) return; const v = _vr; v.cancelled = true; _vr = null; voiceStop(v); voiceUI(false); }
+function voiceSend() { if (!_vr) return; const v = _vr; v.send = true; v.dur = (Date.now() - v.t0) / 1000; _vr = null; voiceUI(false); voiceStop(v); }
+async function voiceFinish(v) {
+    if (!v || v.cancelled || !v.send) return;
+    if (v.dur < 0.6 || !v.chunks.length) return;
+    const blob = new Blob(v.chunks, { type: v.mime });
+    const ext = /mp4/.test(v.mime) ? 'm4a' : /ogg/.test(v.mime) ? 'ogg' : 'webm';
+    let data;
+    try {
+        if (cloudReady()) data = await cloudUpload(blob, `voice-${Date.now()}.${ext}`);
+        else {
+            if (blob.size > 1.2 * 1024 * 1024) { showToast(t('voice_too_big'), 'warning'); return; }
+            data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+        }
+    } catch (err) { showToast(t('upload_failed') + ': ' + ((err && err.message) || ''), 'warning'); return; }
+    const s = isAdmin ? 'admin' : 'employee';
+    const id = `msg-${Date.now()}${Math.floor(Math.random() * 900 + 100)}`;
+    const now = new Date().toLocaleTimeString('en-GB');
+    await database.ref(`employees/${chatEmpId()}/messages/${id}`).set({ id, type: 'audio', fileData: data, mime: v.mime, duration: Math.round(v.dur), sender: s, time: now, timestamp: Date.now(), read: false });
+    database.ref('notifications').push({ type: 'new_message', employeeId: chatEmpId(), message: '🎤 ' + voiceFmt(v.dur), fileKind: 'audio', sender: s, date: today, time: now, read: false, timestamp: Date.now(), forEmployee: s === 'admin', forAdmin: s === 'employee' });
+}
+let _vPlaying = null;
+function voiceBind(el) {
+    const btn = el.querySelector('.vp'), rng = el.querySelector('input'), tm = el.querySelector('.vt'); let au = null; const dur = Number(el.dataset.dur) || 0;
+    const ico = on => { btn.firstElementChild.className = 'fas ' + (on ? 'fa-pause' : 'fa-play'); };
+    const upd = () => { if (!au) return; const d = dur || (isFinite(au.duration) ? au.duration : 0); if (d) rng.value = Math.min(1000, au.currentTime / d * 1000); tm.textContent = voiceFmt(au.currentTime) + ' / ' + voiceFmt(d); };
+    rng.oninput = () => { if (!au) return; const d = dur || au.duration || 0; if (d) { au.currentTime = rng.value / 1000 * d; upd(); } };
+    btn.onclick = ev => {
+        ev.stopPropagation();
+        if (!au) {
+            au = new Audio(el.dataset.src); au.preload = 'auto';
+            au.ontimeupdate = upd; au.onended = () => { ico(false); rng.value = 0; tm.textContent = '0:00 / ' + voiceFmt(dur); _vPlaying = null; };
+            au.onerror = () => { ico(false); showToast(t('voice_fail'), 'warning'); au = null; };
+            au._ico = ico;
+        }
+        if (au.paused) { if (_vPlaying && _vPlaying !== au) { _vPlaying.pause(); _vPlaying._ico && _vPlaying._ico(false); } _vPlaying = au; au.play().then(() => ico(true)).catch(() => { ico(false); showToast(t('voice_fail'), 'warning'); }); }
+        else { au.pause(); ico(false); }
+    };
 }
 function clearChatHistory() {
     showAppDialog({icon:'<i class="fas fa-comment-slash" style="color:white;"></i>',iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',title:t('confirm_title'),msg:t('alert_clear_chat_confirm'),confirmClass:'btn-danger',onConfirm:()=>{
