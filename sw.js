@@ -1,4 +1,4 @@
-// BC Electric Service Worker v4.0
+// BC Electric Service Worker v4.1
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
@@ -34,13 +34,9 @@ messaging.onBackgroundMessage(payload => {
     const title = payload.notification?.title || data.title || 'BC Electric';
     const body  = payload.notification?.body  || data.body  || '';
 
-    return self.registration.showNotification(title, {
+    return showUnique(title, {
         body,
-        icon:  ICON,
-        badge: BADGE,
         tag:   data.tag || 'bc-fcm',
-        dir:   'rtl',
-        vibrate: [200, 100, 200],
         requireInteraction: data.requireInteraction === 'true',
         data: {
             url:        data.url        || APP_URL,
@@ -52,6 +48,19 @@ messaging.onBackgroundMessage(payload => {
         }
     });
 });
+
+// إشعار موحّد: نفس الوسم = إشعار واحد فقط. إن كان معروضاً مسبقاً (من الصفحة أو من الـ push)
+// نحدّثه بصمت بدل تنبيه جديد، فلا يتكرر الصوت/الاهتزاز ولا يظهر مرتان.
+async function showUnique(title, opts) {
+    const tag = opts.tag || 'bc-notif';
+    let exists = false;
+    try { exists = (await self.registration.getNotifications({ tag })).length > 0; } catch (e) {}
+    return self.registration.showNotification(title, Object.assign({
+        icon: ICON, badge: BADGE, dir: 'rtl', tag,
+        renotify: false, silent: exists,
+        vibrate: exists ? undefined : [200, 100, 200]
+    }, opts));
+}
 
 // ─── مكالمة واردة: اهتزاز طويل + أزرار رد/رفض + إغلاق تلقائي ───
 async function showCallNotification(d) {
@@ -153,15 +162,7 @@ async function openApp(data) {
 self.addEventListener('message', e => {
     if (e.data?.type === 'SHOW_NOTIFICATION') {
         const { title, body, tag, requireInteraction } = e.data;
-        self.registration.showNotification(title, {
-            body,
-            icon:  ICON,
-            badge: BADGE,
-            tag:   tag || 'bc-notif',
-            dir:   'rtl',
-            vibrate: [200, 100, 200],
-            requireInteraction: requireInteraction || false,
-        });
+        e.waitUntil(showUnique(title, { body, tag: tag || 'bc-notif', requireInteraction: requireInteraction || false, data: { url: APP_URL } }));
     }
 });
 

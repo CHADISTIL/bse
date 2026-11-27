@@ -18,6 +18,12 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     <style>
+        .chat-message.has-rx{margin-bottom:14px}
+        .rx-row{position:absolute;bottom:-14px;inset-inline-end:10px;display:flex;gap:4px;z-index:2}
+        .rx-chip{display:inline-flex;align-items:center;gap:3px;border:1.5px solid var(--border-light,#e2e8f0);background:var(--card,#fff);color:var(--text,#0f172a);border-radius:99px;padding:1px 7px;font-size:.82rem;line-height:1.5;cursor:pointer;box-shadow:0 2px 6px rgba(15,23,42,.12)}
+        .rx-chip b{font-size:.68rem;font-weight:800}
+        .rx-chip.mine{border-color:var(--accent,#3b82f6);background:var(--accent-glow,#dbeafe)}
+        @keyframes updUp { from{transform:translateY(30px);opacity:0} to{transform:none;opacity:1} }
         @keyframes voicePulse { 0%,100%{opacity:1} 50%{opacity:.25} }
         .vmsg{direction:ltr;display:flex;align-items:center;gap:11px;width:236px;max-width:100%;padding:1px 0 2px;--vbar:rgba(100,116,139,.35);--vfill:var(--primary-mid,#1e3a8a)}
         .chat-message.emp .vmsg{--vbar:rgba(255,255,255,.38);--vfill:#fff}
@@ -3850,9 +3856,9 @@ Object.assign(localization.fr, { set_cloud_row: 'Stockage des fichiers (Cloudina
 Object.assign(localization.ar, { special_work_type: 'نوع العمل', special_work_type_ph: 'مثال: تركيب إنارة (اختياري)', edit_record: 'تعديل السجل', shares_total_warn: 'مجموع الحصص يتجاوز المبلغ الكلي' });
 Object.assign(localization.en, { special_work_type: 'Work type', special_work_type_ph: 'e.g. Lighting installation (optional)', edit_record: 'Edit record', shares_total_warn: 'Shares total exceeds the overall amount' });
 Object.assign(localization.fr, { special_work_type: 'Type de travail', special_work_type_ph: 'ex. : Installation d\'éclairage (facultatif)', edit_record: 'Modifier l\'enregistrement', shares_total_warn: 'Le total des parts dépasse le montant global' });
-Object.assign(localization.ar, { voice_rec: 'تسجيل رسالة صوتية', voice_recording: 'جارٍ التسجيل…', voice_send: 'إرسال', voice_cancel: 'إلغاء', voice_msg: 'رسالة صوتية', voice_denied: 'لا يمكن الوصول إلى الميكروفون. اسمح بالوصول من إعدادات المتصفح', voice_unsupported: 'التسجيل الصوتي غير مدعوم على هذا الجهاز', voice_too_big: 'التسجيل طويل جداً، سجّل رسالة أقصر', voice_play: 'تشغيل', voice_fail: 'تعذر تشغيل الرسالة الصوتية', acc_closed_title: 'تم إغلاق الحساب وتسديد المستحقات', acc_closed_sub: 'سُجّلت الدفعة وأُغلق الحساب بنجاح', acc_closed_emp: 'الموظف', acc_closed_date: 'تاريخ الإغلاق', acc_closed_earned: 'إجمالي المستحقات', acc_closed_paid: 'إجمالي المسحوبات', acc_closed_exp: 'المصروفات', acc_closed_settled: 'المبلغ المسدّد', acc_closed_rem: 'المتبقي بعد الإغلاق', acc_closed_view: 'عرض كشف PDF', acc_closed_done: 'تم', payslip_title: 'كشف الحساب الشهري', payslip_month: 'اختر الشهر', payslip_preview: 'معاينة الكشف', payslip_save: 'طباعة / حفظ PDF', payslip_btn: 'كشف PDF', payslip_dl: 'تنزيل PDF', payslip_print: 'طباعة', payslip_tag_open: 'الشهر الحالي', payslip_tag_unclosed: 'غير مغلق', payslip_tag_closed: 'سجل الدفعات', payslip_pay: 'دفعة', payslip_ctl: 'التحكم في عرض الكشوف', payslip_acc_open: 'إظهار كشف الشهر الحالي', payslip_acc_months: 'إظهار كشوف كل الأشهر (غير المغلقة)', payslip_lang_lbl: 'لغة الكشف', payslip_acc_closed: 'إظهار كشف سجل الدفعات', payslip_dl_fail: 'تعذر إنشاء الملف، جرّب زر الطباعة', payslip_lang: 'لغة الكشف', payslip_none: 'لا يوجد كشف متاح بعد', payslip_set_row: 'إظهار كشف الشهر الحالي للموظفين', payslip_open_on: 'تم إخفاء كشف الشهر الحالي عن الموظفين', payslip_open_off: 'أصبح كشف الشهر الحالي ظاهراً للموظفين' });
-Object.assign(localization.en, { voice_rec: 'Record a voice message', voice_recording: 'Recording…', voice_send: 'Send', voice_cancel: 'Cancel', voice_msg: 'Voice message', voice_denied: 'Microphone access denied. Allow it in your browser settings', voice_unsupported: 'Voice recording is not supported on this device', voice_too_big: 'The recording is too long, record a shorter message', voice_play: 'Play', voice_fail: 'Could not play the voice message', acc_closed_title: 'Account closed and dues settled', acc_closed_sub: 'The payment was recorded and the account closed successfully', acc_closed_emp: 'Employee', acc_closed_date: 'Closing date', acc_closed_earned: 'Total earnings', acc_closed_paid: 'Total withdrawals', acc_closed_exp: 'Expenses', acc_closed_settled: 'Amount settled', acc_closed_rem: 'Remaining after closing', acc_closed_view: 'View PDF statement', acc_closed_done: 'Done', payslip_title: 'Monthly statement', payslip_month: 'Select month', payslip_preview: 'Preview statement', payslip_save: 'Print / Save PDF', payslip_btn: 'PDF Statement', payslip_dl: 'Download PDF', payslip_print: 'Print', payslip_tag_open: 'Current month', payslip_tag_unclosed: 'Not closed', payslip_tag_closed: 'Payments record', payslip_pay: 'Payment', payslip_ctl: 'Statement visibility', payslip_acc_open: 'Show current-month statement', payslip_acc_months: 'Show all months (not closed)', payslip_lang_lbl: 'Statement language', payslip_acc_closed: 'Show payments-record statement', payslip_dl_fail: 'Could not create the file, try Print', payslip_lang: 'Statement language', payslip_none: 'No statement available yet', payslip_set_row: 'Show current-month statement to employees', payslip_open_on: 'Current-month statement hidden from employees', payslip_open_off: 'Current-month statement is now visible to employees' });
-Object.assign(localization.fr, { voice_rec: 'Enregistrer un message vocal', voice_recording: 'Enregistrement…', voice_send: 'Envoyer', voice_cancel: 'Annuler', voice_msg: 'Message vocal', voice_denied: 'Accès au micro refusé. Autorisez-le dans les réglages du navigateur', voice_unsupported: 'L\'enregistrement vocal n\'est pas pris en charge sur cet appareil', voice_too_big: 'L\'enregistrement est trop long, enregistrez un message plus court', voice_play: 'Lire', voice_fail: 'Impossible de lire le message vocal', acc_closed_title: 'Compte clôturé et dû réglé', acc_closed_sub: 'Le paiement a été enregistré et le compte clôturé avec succès', acc_closed_emp: 'Employé', acc_closed_date: 'Date de clôture', acc_closed_earned: 'Total des gains', acc_closed_paid: 'Total des retraits', acc_closed_exp: 'Dépenses', acc_closed_settled: 'Montant réglé', acc_closed_rem: 'Reste après clôture', acc_closed_view: 'Voir le relevé PDF', acc_closed_done: 'Terminé', payslip_title: 'Relevé mensuel', payslip_month: 'Choisir le mois', payslip_preview: 'Aperçu du relevé', payslip_save: 'Imprimer / Enregistrer PDF', payslip_btn: 'Relevé PDF', payslip_dl: 'Télécharger PDF', payslip_print: 'Imprimer', payslip_tag_open: 'Mois en cours', payslip_tag_unclosed: 'Non clôturé', payslip_tag_closed: 'Registre des paiements', payslip_pay: 'Paiement', payslip_ctl: 'Visibilité des relevés', payslip_acc_open: 'Afficher le relevé du mois en cours', payslip_acc_months: 'Afficher tous les mois (non clôturés)', payslip_lang_lbl: 'Langue du relevé', payslip_acc_closed: 'Afficher le relevé du registre des paiements', payslip_dl_fail: 'Impossible de créer le fichier, essayez Imprimer', payslip_lang: 'Langue du relevé', payslip_none: 'Aucun relevé disponible pour le moment', payslip_set_row: 'Afficher le relevé du mois en cours aux employés', payslip_open_on: 'Relevé du mois en cours masqué pour les employés', payslip_open_off: 'Le relevé du mois en cours est visible pour les employés' });
+Object.assign(localization.ar, { upd_title: 'يتوفر تحديث جديد', upd_sub: 'اضغط لتحميل أحدث نسخة من التطبيق', upd_now: 'تحديث الآن', upd_updating: 'جارٍ التحديث…', perm_title: 'تجهيز الدردشة', perm_sub: 'للاستفادة من كل ميزات الدردشة نحتاج إذنك مرة واحدة:', perm_mic: 'الميكروفون — الرسائل الصوتية والمكالمات', perm_cam: 'الكاميرا — مكالمات الفيديو وتصوير الصور', perm_notif: 'الإشعارات — تنبيهك بالرسائل والمكالمات', perm_files: 'الصور والملفات — تُختار عبر زر المرفقات ولا تحتاج إذناً', perm_allow: 'السماح', perm_later: 'لاحقاً', perm_done: 'تم تفعيل الصلاحيات', perm_partial: 'لم تُمنح بعض الصلاحيات، يمكنك تفعيلها من إعدادات المتصفح', voice_rec: 'تسجيل رسالة صوتية', voice_recording: 'جارٍ التسجيل…', voice_send: 'إرسال', voice_cancel: 'إلغاء', voice_msg: 'رسالة صوتية', voice_denied: 'لا يمكن الوصول إلى الميكروفون. اسمح بالوصول من إعدادات المتصفح', voice_unsupported: 'التسجيل الصوتي غير مدعوم على هذا الجهاز', voice_too_big: 'التسجيل طويل جداً، سجّل رسالة أقصر', voice_play: 'تشغيل', voice_fail: 'تعذر تشغيل الرسالة الصوتية', acc_closed_title: 'تم إغلاق الحساب وتسديد المستحقات', acc_closed_sub: 'سُجّلت الدفعة وأُغلق الحساب بنجاح', acc_closed_emp: 'الموظف', acc_closed_date: 'تاريخ الإغلاق', acc_closed_earned: 'إجمالي المستحقات', acc_closed_paid: 'إجمالي المسحوبات', acc_closed_exp: 'المصروفات', acc_closed_settled: 'المبلغ المسدّد', acc_closed_rem: 'المتبقي بعد الإغلاق', acc_closed_view: 'عرض كشف PDF', acc_closed_done: 'تم', payslip_title: 'كشف الحساب الشهري', payslip_month: 'اختر الشهر', payslip_preview: 'معاينة الكشف', payslip_save: 'طباعة / حفظ PDF', payslip_btn: 'كشف PDF', payslip_dl: 'تنزيل PDF', payslip_print: 'طباعة', payslip_tag_open: 'الشهر الحالي', payslip_tag_unclosed: 'غير مغلق', payslip_tag_closed: 'سجل الدفعات', payslip_pay: 'دفعة', payslip_ctl: 'التحكم في عرض الكشوف', payslip_acc_open: 'إظهار كشف الشهر الحالي', payslip_acc_months: 'إظهار كشوف كل الأشهر (غير المغلقة)', payslip_lang_lbl: 'لغة الكشف', payslip_acc_closed: 'إظهار كشف سجل الدفعات', payslip_dl_fail: 'تعذر إنشاء الملف، جرّب زر الطباعة', payslip_lang: 'لغة الكشف', payslip_none: 'لا يوجد كشف متاح بعد', payslip_set_row: 'إظهار كشف الشهر الحالي للموظفين', payslip_open_on: 'تم إخفاء كشف الشهر الحالي عن الموظفين', payslip_open_off: 'أصبح كشف الشهر الحالي ظاهراً للموظفين' });
+Object.assign(localization.en, { upd_title: 'A new update is available', upd_sub: 'Tap to load the latest version of the app', upd_now: 'Update now', upd_updating: 'Updating…', perm_title: 'Set up chat', perm_sub: 'To use all chat features we need your permission once:', perm_mic: 'Microphone — voice messages and calls', perm_cam: 'Camera — video calls and taking photos', perm_notif: 'Notifications — alerts for messages and calls', perm_files: 'Photos & files — picked with the attach button, no permission needed', perm_allow: 'Allow', perm_later: 'Later', perm_done: 'Permissions enabled', perm_partial: 'Some permissions were not granted, you can enable them in browser settings', voice_rec: 'Record a voice message', voice_recording: 'Recording…', voice_send: 'Send', voice_cancel: 'Cancel', voice_msg: 'Voice message', voice_denied: 'Microphone access denied. Allow it in your browser settings', voice_unsupported: 'Voice recording is not supported on this device', voice_too_big: 'The recording is too long, record a shorter message', voice_play: 'Play', voice_fail: 'Could not play the voice message', acc_closed_title: 'Account closed and dues settled', acc_closed_sub: 'The payment was recorded and the account closed successfully', acc_closed_emp: 'Employee', acc_closed_date: 'Closing date', acc_closed_earned: 'Total earnings', acc_closed_paid: 'Total withdrawals', acc_closed_exp: 'Expenses', acc_closed_settled: 'Amount settled', acc_closed_rem: 'Remaining after closing', acc_closed_view: 'View PDF statement', acc_closed_done: 'Done', payslip_title: 'Monthly statement', payslip_month: 'Select month', payslip_preview: 'Preview statement', payslip_save: 'Print / Save PDF', payslip_btn: 'PDF Statement', payslip_dl: 'Download PDF', payslip_print: 'Print', payslip_tag_open: 'Current month', payslip_tag_unclosed: 'Not closed', payslip_tag_closed: 'Payments record', payslip_pay: 'Payment', payslip_ctl: 'Statement visibility', payslip_acc_open: 'Show current-month statement', payslip_acc_months: 'Show all months (not closed)', payslip_lang_lbl: 'Statement language', payslip_acc_closed: 'Show payments-record statement', payslip_dl_fail: 'Could not create the file, try Print', payslip_lang: 'Statement language', payslip_none: 'No statement available yet', payslip_set_row: 'Show current-month statement to employees', payslip_open_on: 'Current-month statement hidden from employees', payslip_open_off: 'Current-month statement is now visible to employees' });
+Object.assign(localization.fr, { upd_title: 'Une mise à jour est disponible', upd_sub: 'Appuyez pour charger la dernière version de l\'application', upd_now: 'Mettre à jour', upd_updating: 'Mise à jour…', perm_title: 'Préparer la discussion', perm_sub: 'Pour profiter de toutes les fonctions, nous avons besoin de votre accord une fois :', perm_mic: 'Micro — messages vocaux et appels', perm_cam: 'Caméra — appels vidéo et prise de photos', perm_notif: 'Notifications — alertes de messages et d\'appels', perm_files: 'Photos et fichiers — choisis via le bouton pièce jointe, sans autorisation', perm_allow: 'Autoriser', perm_later: 'Plus tard', perm_done: 'Autorisations activées', perm_partial: 'Certaines autorisations n\'ont pas été accordées, vous pouvez les activer dans les réglages du navigateur', voice_rec: 'Enregistrer un message vocal', voice_recording: 'Enregistrement…', voice_send: 'Envoyer', voice_cancel: 'Annuler', voice_msg: 'Message vocal', voice_denied: 'Accès au micro refusé. Autorisez-le dans les réglages du navigateur', voice_unsupported: 'L\'enregistrement vocal n\'est pas pris en charge sur cet appareil', voice_too_big: 'L\'enregistrement est trop long, enregistrez un message plus court', voice_play: 'Lire', voice_fail: 'Impossible de lire le message vocal', acc_closed_title: 'Compte clôturé et dû réglé', acc_closed_sub: 'Le paiement a été enregistré et le compte clôturé avec succès', acc_closed_emp: 'Employé', acc_closed_date: 'Date de clôture', acc_closed_earned: 'Total des gains', acc_closed_paid: 'Total des retraits', acc_closed_exp: 'Dépenses', acc_closed_settled: 'Montant réglé', acc_closed_rem: 'Reste après clôture', acc_closed_view: 'Voir le relevé PDF', acc_closed_done: 'Terminé', payslip_title: 'Relevé mensuel', payslip_month: 'Choisir le mois', payslip_preview: 'Aperçu du relevé', payslip_save: 'Imprimer / Enregistrer PDF', payslip_btn: 'Relevé PDF', payslip_dl: 'Télécharger PDF', payslip_print: 'Imprimer', payslip_tag_open: 'Mois en cours', payslip_tag_unclosed: 'Non clôturé', payslip_tag_closed: 'Registre des paiements', payslip_pay: 'Paiement', payslip_ctl: 'Visibilité des relevés', payslip_acc_open: 'Afficher le relevé du mois en cours', payslip_acc_months: 'Afficher tous les mois (non clôturés)', payslip_lang_lbl: 'Langue du relevé', payslip_acc_closed: 'Afficher le relevé du registre des paiements', payslip_dl_fail: 'Impossible de créer le fichier, essayez Imprimer', payslip_lang: 'Langue du relevé', payslip_none: 'Aucun relevé disponible pour le moment', payslip_set_row: 'Afficher le relevé du mois en cours aux employés', payslip_open_on: 'Relevé du mois en cours masqué pour les employés', payslip_open_off: 'Le relevé du mois en cours est visible pour les employés' });
 function sp(k) { return (SUSP_TXT[currentLang] || SUSP_TXT.ar)[k] || SUSP_TXT.ar[k] || k; }
 Object.keys(SUSP_TXT).forEach(l => Object.assign(PUSH_TITLES[l], {
     susp_msg_new: { ar: '💬 رسالة من موظف معلّق', en: '💬 Suspended employee message', fr: '💬 Message d\'un employé suspendu' }[l],
@@ -8056,6 +8062,7 @@ function openChat(suspId) {
     const mb = document.getElementById('micBtn'); if (mb) mb.style.display = (susp || !window.MediaRecorder || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) ? 'none' : '';
     document.getElementById('chatModal').style.display = 'flex';
     loadMessages();
+    if (!susp) setTimeout(maybeAskPermissions, 500);
 }
 function openChatAsAdmin(id) { closeModal('hiddenEmployeesModal'); currentEmpId = id; currentEmpData = employees.find(e => e.id == id); openChat(); }
 // التاريخ الكامل لوقت إرسال الرسالة: YYYY-MM-DD HH:MM
@@ -8096,22 +8103,41 @@ window.openImageViewer = function(url, name) {
 };
 
 // قائمة الضغط المطول على رسالة: نسخ النص (للنصوص) وحذف (للإدارة)
+// ═══ التفاعل بالإيموجي على الرسائل ═══
+const RX_EMOJIS = ['👍', '❤️', '😄', '😢', '😡', '⚡'];
+function toggleReaction(m, emoji) {
+    if (!m || !m.id) return;
+    const me = isAdmin ? 'admin' : 'employee';
+    const ref = database.ref(`employees/${chatEmpId()}/messages/${m.id}/reactions/${me}`);
+    if (m.reactions && m.reactions[me] === emoji) ref.remove(); else ref.set(emoji);
+    try { navigator.vibrate && navigator.vibrate(15); } catch (e) {}
+}
+function reactionChips(m) {
+    const r = m.reactions; if (!r) return '';
+    const me = isAdmin ? 'admin' : 'employee', cnt = {};
+    Object.keys(r).forEach(k => { if (r[k]) cnt[r[k]] = (cnt[r[k]] || 0) + 1; });
+    const keys = Object.keys(cnt); if (!keys.length) return '';
+    return `<div class="rx-row">${keys.map(e => `<button type="button" class="rx-chip${r[me] === e ? ' mine' : ''}" data-rx="${e}">${e}${cnt[e] > 1 ? `<b>${cnt[e]}</b>` : ''}</button>`).join('')}</div>`;
+}
 function showMessageMenu(m) {
     document.getElementById('msgMenu')?.remove();
     const items = [];
     if (m.type !== 'image' && m.type !== 'file' && m.type !== 'audio' && m.text) items.push(`<button class="btn btn-outline btn-block" style="margin-bottom:8px;" id="msgMenuCopy"><i class="fas fa-copy"></i> ${t('copy_text')}</button>`);
     if (isAdmin) items.push(`<button class="btn btn-danger btn-block" style="margin-bottom:8px;" id="msgMenuDel"><i class="fas fa-trash"></i> ${t('delete') || 'حذف'}</button>`);
-    if (!items.length) return;
+    const _me = isAdmin ? 'admin' : 'employee', _mine = m.reactions && m.reactions[_me];
+    const rxRow = `<div style="display:flex;justify-content:space-around;gap:4px;padding:8px 6px;margin-bottom:12px;background:var(--bg2);border-radius:99px;">${RX_EMOJIS.map(e => `<button type="button" data-rx="${e}" style="font-size:1.6rem;line-height:1;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;background:${_mine === e ? 'var(--accent-glow,#dbeafe)' : 'transparent'};${_mine === e ? 'box-shadow:0 0 0 2px var(--accent,#3b82f6);' : ''}transition:transform .12s;">${e}</button>`).join('')}</div>`;
     const o = document.createElement('div');
     o.id = 'msgMenu'; o.className = 'modal'; o.style.cssText = 'display:flex;align-items:flex-end;z-index:5100;';
     o.innerHTML = `<div class="modal-sheet" style="padding:18px 18px 22px;">
-        <div style="font-size:0.7rem;color:var(--text-secondary);text-align:center;margin-bottom:12px;">${fmtMsgDate(m)}</div>
+        <div style="font-size:0.7rem;color:var(--text-secondary);text-align:center;margin-bottom:10px;">${fmtMsgDate(m)}</div>
+        ${rxRow}
         ${items.join('')}
         <button class="btn btn-outline btn-block" id="msgMenuCancel">${t('cancel') || 'إلغاء'}</button>
     </div>`;
     o.onclick = e => { if (e.target === o) o.remove(); };
     document.body.appendChild(o);
     document.getElementById('msgMenuCancel').onclick = () => o.remove();
+    o.querySelectorAll('[data-rx]').forEach(b => { b.onclick = () => { o.remove(); toggleReaction(m, b.dataset.rx); }; });
     const cp = document.getElementById('msgMenuCopy');
     if (cp) cp.onclick = () => { try { navigator.clipboard.writeText(m.text); showToast(t('copied'), 'success'); } catch (e) {} o.remove(); };
     const dl = document.getElementById('msgMenuDel');
@@ -8197,6 +8223,8 @@ function loadMessages() {
                 inner = puEsc(m.text || '');
             }
             div.innerHTML = `${inner}<small><i class="fas fa-clock"></i> ${fmtMsgDate(m)}</small>`;
+            const rxh = reactionChips(m);
+            if (rxh) { div.insertAdjacentHTML('beforeend', rxh); div.classList.add('has-rx'); div.querySelectorAll('.rx-chip').forEach(c => { c.onclick = ev => { ev.stopPropagation(); toggleReaction(m, c.dataset.rx); }; c.addEventListener('touchstart', ev => ev.stopPropagation(), { passive: true }); }); }
             const vm = div.querySelector('.vmsg'); if (vm) voiceBind(vm);
             const im = div.querySelector('.chat-img');
             if (im) { im.src = m.fileData; im.onclick = () => { if (div._lp) return; openImageViewer(m.fileData, m.fileName); }; }
@@ -8244,6 +8272,84 @@ function sendMessage() {
         database.ref('notifications').push({ type: 'new_message', employeeId: chatEmpId(), message: txt, sender: s, date: today, time: new Date().toLocaleTimeString('en-GB'), read: false, timestamp: Date.now(), forEmployee: s==='admin', forAdmin: s==='employee' })
     ]).then(() => { document.getElementById('chatInput').value = ''; });
 }
+// ═══ تحديث التطبيق: زر يظهر فور توفر نسخة أحدث ═══
+const APP_VERSION = '20261127-1251';   // يُغيَّر مع كل إصدار جديد من الملف
+let _updShown = false;
+function showUpdateBanner() {
+    if (_updShown || document.getElementById('updBanner')) return; _updShown = true;
+    const b = document.createElement('div'); b.id = 'updBanner';
+    b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9500;max-width:420px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;color:#fff;background:linear-gradient(135deg,var(--primary-mid,#1e3a8a),var(--primary-light,#2563eb));box-shadow:0 12px 32px rgba(15,23,42,.35);animation:updUp .35s ease;';
+    b.innerHTML = `<div style="flex:0 0 40px;height:40px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;"><i class="fas fa-arrows-rotate"></i></div>
+        <div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:.88rem;">${t('upd_title')}</div><div style="font-size:.7rem;opacity:.85;">${t('upd_sub')}</div></div>
+        <button type="button" id="updBtn" style="flex:0 0 auto;border:none;border-radius:99px;padding:9px 16px;font-weight:800;font-size:.8rem;cursor:pointer;background:#fff;color:var(--primary-mid,#1e3a8a);font-family:inherit;">${t('upd_now')}</button>`;
+    document.body.appendChild(b);
+    document.getElementById('updBtn').onclick = applyUpdate;
+}
+async function applyUpdate() {
+    const btn = document.getElementById('updBtn'); if (btn) { btn.disabled = true; btn.textContent = t('upd_updating'); }
+    try { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.update().catch(() => {}))); } catch (e) {}
+    try { if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } } catch (e) {}
+    location.reload();
+}
+async function checkForUpdate() {
+    if (_updShown || !navigator.onLine) return;
+    try {
+        const r = await fetch(location.pathname + '?_=' + Date.now(), { cache: 'no-store' });
+        const m = (await r.text()).match(/const APP_VERSION = '([^']+)'/);
+        if (m && m[1] !== APP_VERSION) showUpdateBanner();
+    } catch (e) {}
+}
+setTimeout(checkForUpdate, 4000);
+setInterval(checkForUpdate, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => setTimeout(() => {
+        navigator.serviceWorker.getRegistration().then(reg => {
+            if (!reg) return;
+            reg.addEventListener('updatefound', () => {
+                const nw = reg.installing; if (!nw) return;
+                nw.addEventListener('statechange', () => { if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(); });
+            });
+            reg.update().catch(() => {});
+        });
+    }, 1500));
+}
+
+// ═══ طلب الصلاحيات (ميكروفون / كاميرا / إشعارات) مرة واحدة عند أول فتح للدردشة ═══
+async function maybeAskPermissions() {
+    try { if (localStorage.getItem('perms_v1') === '1') return; } catch (e) {}
+    if (document.getElementById('permModal')) return;
+    const st = async n => { try { return (await navigator.permissions.query({ name: n })).state; } catch (e) { return 'prompt'; } };
+    const [mic, cam] = await Promise.all([st('microphone'), st('camera')]);
+    const notifNeed = ('Notification' in window) && Notification.permission === 'default';
+    if (mic !== 'prompt' && cam !== 'prompt' && !notifNeed) { try { localStorage.setItem('perms_v1', '1'); } catch (e) {} return; }
+    const row = (ic, txt) => `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-light);font-size:0.8rem;text-align:start;"><span style="flex:0 0 34px;height:34px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;color:var(--primary-mid);"><i class="fas ${ic}"></i></span><span>${txt}</span></div>`;
+    const m = document.createElement('div');
+    m.className = 'modal modal-center'; m.id = 'permModal'; m.style.display = 'flex'; m.style.zIndex = '5200';
+    m.innerHTML = `<div class="modal-dialog" style="max-width:380px;padding:22px 20px;text-align:center;">
+        <div style="width:58px;height:58px;margin:0 auto 10px;border-radius:50%;background:linear-gradient(135deg,var(--primary-mid),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;"><i class="fas fa-shield-halved"></i></div>
+        <h3 style="margin:0 0 4px;font-size:1.05rem;">${t('perm_title')}</h3>
+        <p style="margin:0 0 8px;font-size:0.76rem;color:var(--text-secondary);">${t('perm_sub')}</p>
+        ${row('fa-microphone', t('perm_mic'))}${row('fa-video', t('perm_cam'))}${row('fa-bell', t('perm_notif'))}${row('fa-image', t('perm_files'))}
+        <button class="btn btn-primary btn-block" style="margin-top:14px;" id="permAllow"><i class="fas fa-check"></i> ${t('perm_allow')}</button>
+        <button class="btn btn-block" style="background:transparent;color:var(--text-secondary);margin-top:4px;" id="permLater">${t('perm_later')}</button>
+    </div>`;
+    document.body.appendChild(m);
+    document.getElementById('permLater').onclick = () => m.remove();
+    document.getElementById('permAllow').onclick = async () => {
+        m.remove(); let ok = true;
+        try { localStorage.setItem('perms_v1', '1'); } catch (e) {}
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            let stream = null;
+            try { stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true }); }
+            catch (e) { try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); ok = false; } catch (e2) { ok = false; } }
+            if (stream) stream.getTracks().forEach(x => x.stop());
+        }
+        if ('Notification' in window && Notification.permission === 'default') { try { const r = await Notification.requestPermission(); if (r !== 'granted') ok = false; } catch (e) {} }
+        showToast(t(ok ? 'perm_done' : 'perm_partial'), ok ? 'success' : 'warning');
+    };
+}
+
 // ═══ الرسائل الصوتية ═══
 let _vr = null;
 const VOICE_MAX_S = 180;
@@ -9597,10 +9703,10 @@ function getFCMToken() {
         _fcmMessaging.onMessage(payload => {
             // المكالمات تُعرض عبر مستمع Firebase داخل الصفحة (بانر + رنين)، فلا نكرّرها هنا
             if (payload.data?.kind === 'call' || payload.data?.kind === 'call_missed') return;
-            const title = payload.notification?.title || 'BC Electric';
-            const body = payload.notification?.body || '';
+            const title = payload.notification?.title || payload.data?.title || 'BC Electric';
+            const body = payload.notification?.body || payload.data?.body || '';
             const tag = payload.data?.tag || 'fcm-notif';
-            _doShowNotif(title, body, tag);
+            notifyUnique(tag, title, body);
         });
     }).catch(e => {
         console.warn('[FCM] Token error:', e);
@@ -9628,6 +9734,22 @@ function requestNotifPermission() {
     }, 3000);
 }
 
+
+// نقطة واحدة لكل إشعارات الرسائل/الطلبات (push في الواجهة + مستمع Firebase + push الخلفية):
+//  • كل إشعار (مفتاحه واحد) يُعرض مرة واحدة فقط مهما وصل من مصادر
+//  • التطبيق مفتوح أمامك ← تنبيه داخلي صغير فقط (دون إشعار نظام)، ولا شيء إن كانت المحادثة نفسها مفتوحة
+//  • التطبيق في الخلفية ← إشعار نظام واحد (والـ sw.js يمنع تكراره مع push الـ Worker بنفس الوسم)
+const _notifSeen = new Set();
+function notifyUnique(tag, title, body, type) {
+    if (tag) { if (_notifSeen.has(tag)) return; _notifSeen.add(tag); if (_notifSeen.size > 200) _notifSeen.delete(_notifSeen.values().next().value); }
+    if (document.visibilityState === 'visible') {
+        const cm = document.getElementById('chatModal');
+        if (type === 'new_message' && cm && cm.style.display !== 'none') return;
+        try { showToast(body, 'info', title); } catch (e) {}
+        return;
+    }
+    _doShowNotif(title, body, tag);
+}
 
 function showLocalNotification(title, body, tag, requireInteraction) {
     if (!('Notification' in window)) return;
@@ -9679,7 +9801,7 @@ function startFirebaseNotifListener() {
         if (!isForMe) return;
         const msg = getNotifMessage ? getNotifMessage(n) : (n.message || '');
         const title = pushTitle(n.type);
-        showLocalNotification(title, msg, snap.key);
+        notifyUnique(snap.key, title, msg, n.type);
     });
 }
 
