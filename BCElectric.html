@@ -24,6 +24,12 @@
         .rx-chip b{font-size:.68rem;font-weight:800}
         .rx-chip.mine{border-color:var(--accent,#3b82f6);background:var(--accent-glow,#dbeafe)}
         @keyframes updUp { from{transform:translateY(30px);opacity:0} to{transform:none;opacity:1} }
+        .msg-badge{position:absolute;top:-6px;inset-inline-end:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:99px;background:var(--danger,#dc2626);color:#fff;font-size:.68rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--card,#fff);animation:msgPop .4s ease}
+        .profile-action-item{position:relative}
+        .profile-action-item.has-new-msg i{color:var(--danger,#dc2626);animation:msgWiggle 1.6s ease-in-out infinite;transform-origin:50% 80%}
+        .msg-ring{color:var(--danger,#dc2626);animation:msgWiggle 1.6s ease-in-out infinite}
+        @keyframes msgWiggle{0%,60%,100%{transform:rotate(0)}10%{transform:rotate(-14deg)}20%{transform:rotate(12deg)}30%{transform:rotate(-9deg)}40%{transform:rotate(6deg)}50%{transform:rotate(0)}}
+        @keyframes msgPop{from{transform:scale(0)}60%{transform:scale(1.25)}to{transform:scale(1)}}
         @keyframes voicePulse { 0%,100%{opacity:1} 50%{opacity:.25} }
         .vmsg{direction:ltr;display:flex;align-items:center;gap:11px;width:236px;max-width:100%;padding:1px 0 2px;--vbar:rgba(100,116,139,.35);--vfill:var(--primary-mid,#1e3a8a)}
         .chat-message.emp .vmsg{--vbar:rgba(255,255,255,.38);--vfill:#fff}
@@ -1295,7 +1301,7 @@
         <div class="profile-actions">
             <div class="profile-action-item" onclick="openImageModal()"><i class="fas fa-user-edit"></i><span data-i18n="my_file">ملفي</span></div>
             <div class="profile-action-item" onclick="openRequestModal()"><i class="fas fa-paper-plane"></i><span data-i18n="new_request">طلب جديد</span></div>
-            <div class="profile-action-item" onclick="openChat()"><i class="fas fa-comment-dots"></i><span data-i18n="chat">المحادثة</span></div>
+            <div class="profile-action-item" id="empChatTile" onclick="openChat()"><i class="fas fa-comment-dots"></i><span data-i18n="chat">المحادثة</span><b class="msg-badge" id="empChatBadge" style="display:none"></b></div>
             <div class="profile-action-item" onclick="showRewardsModal()"><i class="fas fa-trophy"></i><span data-i18n="my_points">نقاطي</span></div>
             <div class="profile-action-item" id="payslipActionBtn" onclick="openPayslipModal()"><i class="fas fa-file-pdf"></i><span data-i18n="payslip_btn">كشف PDF</span></div>
         </div>
@@ -3850,6 +3856,30 @@ const DT = {
 ]
 };
 function dt(k, p) { const a = DT[k] || []; const i = { ar: 0, en: 1, fr: 2 }[currentLang]; let s = a[i == null ? 0 : i] || a[0] || k; if (p) Object.keys(p).forEach(x => { s = s.split('{' + x + '}').join(p[x]); }); return s; }
+Object.assign(DT, {
+"cf_btn": ["إدارة الملفات المخزّنة", "Manage stored files", "Gérer les fichiers stockés"],
+"cf_title": ["ملفات المحادثات على Cloudinary", "Chat files on Cloudinary", "Fichiers de discussion sur Cloudinary"],
+"cf_total": ["{n} ملف", "{n} files", "{n} fichiers"],
+"cf_all": ["الكل", "All", "Tous"],
+"cf_img": ["صور", "Images", "Images"],
+"cf_aud": ["صوتيات", "Voice", "Vocaux"],
+"cf_fil": ["ملفات", "Files", "Fichiers"],
+"cf_t_img": ["صورة", "Image", "Image"],
+"cf_t_aud": ["رسالة صوتية", "Voice message", "Message vocal"],
+"cf_t_fil": ["ملف", "File", "Fichier"],
+"cf_none": ["لا توجد ملفات", "No files", "Aucun fichier"],
+"cf_open": ["فتح", "Open", "Ouvrir"],
+"cf_older": ["حذف الملفات الأقدم من", "Delete files older than", "Supprimer les fichiers de plus de"],
+"cf_days": ["{n} يوم", "{n} days", "{n} jours"],
+"cf_del_old": ["حذف", "Delete", "Supprimer"],
+"cf_c_del": ["حذف هذا الملف من المحادثة؟", "Delete this file from the chat?", "Supprimer ce fichier de la discussion ?"],
+"cf_c_old": ["سيُحذف {n} ملف من المحادثات. متابعة؟", "{n} files will be removed from chats. Continue?", "{n} fichiers seront supprimés des discussions. Continuer ?"],
+"cf_deleted": ["تم الحذف", "Deleted", "Supprimé"],
+"cf_nothing": ["لا توجد ملفات بهذا العمر", "No files that old", "Aucun fichier aussi ancien"],
+"cf_note": ["الحذف يزيل الملف من المحادثات داخل التطبيق فقط، ويبقى في حسابك على Cloudinary حتى تحذفه من لوحة Cloudinary (الحذف من التطبيق يحتاج مفتاحاً سرياً لا يصح تخزينه فيه).", "Deleting removes the file from the chats in the app only. It stays in your Cloudinary account until you delete it from the Cloudinary dashboard (deleting from the app needs a secret key that must not be stored in it).", "La suppression retire le fichier des discussions dans l'application uniquement. Il reste dans votre compte Cloudinary jusqu'à sa suppression depuis le tableau de bord Cloudinary (la suppression depuis l'application exige une clé secrète qui ne doit pas y être stockée)."],
+"cf_dash": ["فتح لوحة Cloudinary", "Open Cloudinary dashboard", "Ouvrir le tableau de bord Cloudinary"],
+"cf_local": ["{n} ملف ما زال مخزّناً داخل قاعدة البيانات — استخدم «نقل الملفات القديمة»", "{n} files are still stored inside the database — use “Move old files”", "{n} fichiers sont encore stockés dans la base — utilisez « Déplacer les anciens fichiers »"]
+});
 Object.assign(localization.ar, { set_cloud_row: 'تخزين ملفات المحادثات (Cloudinary)', set_call_row: 'إعدادات المكالمات (النغمة وخادم TURN)', set_size_row: 'تشخيص حجم البيانات' });
 Object.assign(localization.en, { set_cloud_row: 'Chat file storage (Cloudinary)', set_call_row: 'Call settings (ringtone & TURN)', set_size_row: 'Data size diagnostics' });
 Object.assign(localization.fr, { set_cloud_row: 'Stockage des fichiers (Cloudinary)', set_call_row: 'Paramètres des appels (sonnerie & TURN)', set_size_row: 'Diagnostic de la taille des données' });
@@ -4008,6 +4038,14 @@ function suspReject(id, kind) {
 }
 // المحادثة تُكتب في سجل الموظف المعلَّق نفسه دون تسجيل دخول كامل
 let _suspChatId = null;
+// رسائل غير مقروءة من الطرف الآخر (from = 'admin' أو 'employee')
+function unreadMsgs(emp, from) { return emp && emp.messages ? Object.values(emp.messages).filter(m => m && m.sender === from && !m.read && m.type !== 'call').length : 0; }
+function refreshEmpChatBadge() {
+    const b = document.getElementById('empChatBadge'), tile = document.getElementById('empChatTile'); if (!b || !tile) return;
+    const n = isAdmin ? 0 : unreadMsgs(currentEmpData, 'admin');
+    b.style.display = n ? 'flex' : 'none'; b.textContent = n > 99 ? '99+' : n;
+    tile.classList.toggle('has-new-msg', n > 0);
+}
 function chatEmpId() { return _suspChatId != null ? _suspChatId : currentEmpId; }
 
 function applyLanguage(lang) {
@@ -4387,10 +4425,75 @@ window.openCloudinarySettings = function() {
         <div class="form-row"><label>${dt('cl_preset')}</label><input id="cldPreset" class="input" dir="ltr" value="${puEsc(cur.preset || '')}" placeholder="${dt('cl_preset_ph')}"></div>
         <button class="btn btn-outline btn-block" style="margin-bottom:8px;" onclick="testCloudinary()"><i class="fas fa-vial"></i> ${dt('cl_test')}</button>
         <button class="btn btn-primary btn-block" style="margin-bottom:8px;" onclick="saveCloudinarySettings()"><i class="fas fa-save"></i> ${dt('cl_save')}</button>
-        <button class="btn btn-warning btn-block" onclick="migrateChatFilesToCloud()"><i class="fas fa-truck-moving"></i> ${dt('cl_migrate')}</button>
+        <button class="btn btn-warning btn-block" style="margin-bottom:8px;" onclick="migrateChatFilesToCloud()"><i class="fas fa-truck-moving"></i> ${dt('cl_migrate')}</button>
+        <button class="btn btn-outline btn-block" onclick="openCloudFiles()"><i class="fas fa-folder-open"></i> ${dt('cf_btn')}</button>
         <div id="cldMsg" style="font-size:0.75rem;margin-top:10px;line-height:1.7;"></div>
     </div>`;
     document.body.appendChild(m);
+};
+// ═══ إدارة ملفات Cloudinary المرتبطة بالمحادثات ═══
+let _cfTab = 'all';
+function cloudFileList() {
+    const out = [], local = [];
+    employees.forEach(e => Object.values(e.messages || {}).forEach(m => {
+        if (!m || !m.fileData || !m.id) return;
+        const kind = m.type === 'image' ? 'img' : m.type === 'audio' ? 'aud' : 'fil';
+        if (/^https?:\/\//.test(m.fileData)) out.push({ eid: e.id, en: e.name, m, kind }); else if (/^data:/.test(m.fileData)) local.push(m);
+    }));
+    out.sort((a, b) => (b.m.timestamp || 0) - (a.m.timestamp || 0));
+    return { out, local: local.length };
+}
+window.openCloudFiles = function() {
+    if (!isDirector) return;
+    document.getElementById('cloudFilesModal')?.remove();
+    const m = document.createElement('div');
+    m.className = 'modal modal-center'; m.id = 'cloudFilesModal'; m.style.display = 'flex'; m.style.zIndex = '3100';
+    m.innerHTML = `<div class="modal-dialog" style="max-width:440px;">
+        <div class="modal-header"><div class="modal-icon"><i class="fas fa-folder-open"></i></div><h2>${dt('cf_title')}</h2>
+            <button class="close-btn" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i></button></div>
+        <div id="cfSummary" style="font-size:.74rem;color:var(--text-secondary);margin-bottom:8px;"></div>
+        <div id="cfTabs" style="display:flex;gap:6px;margin-bottom:10px;"></div>
+        <div id="cfList" style="max-height:44vh;overflow-y:auto;margin-bottom:12px;"></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+            <span style="font-size:.76rem;font-weight:700;flex:1;">${dt('cf_older')}</span>
+            <select id="cfOld" class="input" style="width:auto;padding:6px 8px;">${[30, 60, 90, 180].map(n => `<option value="${n}">${dt('cf_days', { n })}</option>`).join('')}</select>
+            <button class="btn btn-danger btn-sm" onclick="cfDeleteOld()">${dt('cf_del_old')}</button>
+        </div>
+        <p style="font-size:.7rem;color:var(--text-secondary);line-height:1.7;margin-bottom:8px;">${dt('cf_note')}</p>
+        <a class="btn btn-outline btn-block" href="https://console.cloudinary.com/" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> ${dt('cf_dash')}</a>
+    </div>`;
+    document.body.appendChild(m);
+    _cfTab = 'all'; cfRender();
+};
+function cfRender() {
+    const { out, local } = cloudFileList();
+    const tabs = [['all', 'cf_all'], ['img', 'cf_img'], ['aud', 'cf_aud'], ['fil', 'cf_fil']];
+    const cnt = k => k === 'all' ? out.length : out.filter(x => x.kind === k).length;
+    document.getElementById('cfTabs').innerHTML = tabs.map(([k, l]) => `<button type="button" onclick="_cfTab='${k}';cfRender()" style="flex:1;padding:7px 4px;border-radius:10px;border:1.5px solid ${_cfTab === k ? 'var(--accent,#3b82f6)' : 'var(--border-light)'};background:${_cfTab === k ? 'var(--accent-glow,#dbeafe)' : 'transparent'};font-weight:700;font-size:.74rem;cursor:pointer;color:inherit;font-family:inherit;">${dt(l)} <span style="opacity:.6">${cnt(k)}</span></button>`).join('');
+    document.getElementById('cfSummary').innerHTML = dt('cf_total', { n: out.length }) + (local ? `<br><span style="color:var(--warning);">${dt('cf_local', { n: local })}</span>` : '');
+    const rows = out.filter(x => _cfTab === 'all' || x.kind === _cfTab);
+    const ic = { img: 'fa-image', aud: 'fa-microphone', fil: 'fa-file' };
+    document.getElementById('cfList').innerHTML = rows.length ? rows.map(x => {
+        const d = x.m.timestamp ? new Date(x.m.timestamp).toLocaleDateString() : '';
+        const nm = x.m.fileName || dt('cf_t_' + x.kind);
+        const th = x.kind === 'img' ? `<img src="${puEsc(x.m.fileData)}" loading="lazy" style="width:44px;height:44px;border-radius:10px;object-fit:cover;">` : `<span style="width:44px;height:44px;border-radius:10px;background:var(--bg2);display:flex;align-items:center;justify-content:center;color:var(--primary-mid);"><i class="fas ${ic[x.kind]}"></i></span>`;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light);">${th}
+            <div style="flex:1;min-width:0;"><div style="font-size:.8rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${puEsc(nm)}</div><div style="font-size:.68rem;color:var(--text-secondary);">${puEsc(x.en || '')} · ${d}${x.m.fileSize ? ' · ' + puEsc(x.m.fileSize) : ''}</div></div>
+            <a href="${puEsc(x.m.fileData)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" title="${dt('cf_open')}"><i class="fas fa-up-right-from-square"></i></a>
+            <button type="button" class="btn btn-danger btn-sm" onclick="cfDelete(${x.eid},'${x.m.id}')"><i class="fas fa-trash"></i></button></div>`;
+    }).join('') : `<p style="text-align:center;padding:22px;color:var(--text-secondary);font-size:.8rem;">${dt('cf_none')}</p>`;
+}
+window.cfDelete = function(eid, mid) {
+    if (!confirm(dt('cf_c_del'))) return;
+    database.ref(`employees/${eid}/messages/${mid}`).remove().then(() => { showToast(dt('cf_deleted'), 'success'); setTimeout(cfRender, 400); });
+};
+window.cfDeleteOld = function() {
+    const days = Number(document.getElementById('cfOld').value) || 90, lim = Date.now() - days * 864e5;
+    const old = cloudFileList().out.filter(x => (x.m.timestamp || 0) && x.m.timestamp < lim);
+    if (!old.length) { showToast(dt('cf_nothing'), 'info'); return; }
+    if (!confirm(dt('cf_c_old', { n: old.length }))) return;
+    const byEmp = {}; old.forEach(x => { (byEmp[x.eid] = byEmp[x.eid] || {})[x.m.id] = null; });
+    Promise.all(Object.entries(byEmp).map(([eid, up]) => database.ref(`employees/${eid}/messages`).update(up))).then(() => { showToast(dt('cf_deleted'), 'success'); setTimeout(cfRender, 500); });
 };
 function _cldInputs() {
     return { cloud: (document.getElementById('cldCloud')?.value || '').trim(), preset: (document.getElementById('cldPreset')?.value || '').trim() };
@@ -5869,7 +5972,7 @@ function showEmployeeUI() {
 function handleEmployeeLogout() { isAdmin ? showAdminUI() : logout(); }
 
 function updateEmployeeProfile() {
-    setTimeout(() => { try { refreshPayslipBtn(); checkEmpAccountClosed(); } catch (e) {} }, 0);
+    setTimeout(() => { try { refreshPayslipBtn(); checkEmpAccountClosed(); refreshEmpChatBadge(); } catch (e) {} }, 0);
     if (!currentEmpData) return;
     document.getElementById('profileAvatar').src = currentEmpData.img || `https://ui-avatars.com/api/?background=fff&color=1e2b5a&name=${currentEmpData.name}`;
     document.getElementById('profileName').innerText = currentEmpData.name;
@@ -6671,7 +6774,7 @@ function renderUI() {
             <div class="action-buttons">
                 <button class="action-btn" onclick="openEmployeeDetails(${emp.id})"><i class="fas fa-user"></i> ${t('details')}</button>
                 ${isDirector ? `<button class="action-btn" onclick="editEmployee(${emp.id})"><i class="fas fa-edit"></i> ${t('edit')}</button>` : ''}
-                <button class="action-btn" onclick="openChatAsAdmin(${emp.id})"><i class="fas fa-comment"></i> ${t('chat')}</button>
+                <button class="action-btn" style="position:relative;" onclick="openChatAsAdmin(${emp.id})"><i class="fas fa-comment${unreadMsgs(emp, 'employee') ? ' msg-ring' : ''}"></i> ${t('chat')}${unreadMsgs(emp, 'employee') ? `<b class="msg-badge">${unreadMsgs(emp, 'employee')}</b>` : ''}</button>
                 <button class="action-btn" onclick="openSendPopupModal(${emp.id})"><i class="fas fa-bullhorn"></i> ${pu('send_btn')}</button>
                 ${isDirector ? `<button class="action-btn" onclick="showEmployeeFinancialStatus(${emp.id})"><i class="fas fa-wallet"></i> ${t('financial')}</button>` : ''}
             </div>`;
@@ -8231,6 +8334,13 @@ function loadMessages() {
             d.appendChild(div);
         });
         d.scrollTop = d.scrollHeight;
+        // الرسائل الواردة من الطرف الآخر تُعتبر مقروءة ما دامت المحادثة مفتوحة
+        const cm = document.getElementById('chatModal');
+        if (cm && cm.style.display !== 'none' && s.val()) {
+            const other = isAdmin ? 'employee' : 'admin', up = {};
+            Object.values(s.val()).forEach(m => { if (m && m.id && m.sender === other && !m.read) up[m.id + '/read'] = true; });
+            if (Object.keys(up).length) { try { database.ref(`employees/${chatEmpId()}/messages`).update(up); } catch (e) {} }
+        }
     });
 }
 
@@ -8273,7 +8383,7 @@ function sendMessage() {
     ]).then(() => { document.getElementById('chatInput').value = ''; });
 }
 // ═══ تحديث التطبيق: زر يظهر فور توفر نسخة أحدث ═══
-const APP_VERSION = '20261127-1251';   // يُغيَّر مع كل إصدار جديد من الملف
+const APP_VERSION = '20261127-1312';   // يُغيَّر مع كل إصدار جديد من الملف
 let _updShown = false;
 function showUpdateBanner() {
     if (_updShown || document.getElementById('updBanner')) return; _updShown = true;
@@ -8295,7 +8405,7 @@ async function checkForUpdate() {
     if (_updShown || !navigator.onLine) return;
     try {
         const r = await fetch(location.pathname + '?_=' + Date.now(), { cache: 'no-store' });
-        const m = (await r.text()).match(/const APP_VERSION = '([^']+)'/);
+        const m = (await r.text()).match(/^const APP_VERSION = '([^']+)'/m);
         if (m && m[1] !== APP_VERSION) showUpdateBanner();
     } catch (e) {}
 }
