@@ -38,6 +38,7 @@ messaging.onBackgroundMessage(payload => {
         body,
         tag:   data.tag || 'bc-fcm',
         requireInteraction: data.requireInteraction === 'true',
+        icon: data.icon || ICON,
         data: {
             url:        data.url        || APP_URL,
             tag:        data.tag        || '',
@@ -161,8 +162,8 @@ async function openApp(data) {
 // ─── رسائل من الصفحة ───
 self.addEventListener('message', e => {
     if (e.data?.type === 'SHOW_NOTIFICATION') {
-        const { title, body, tag, requireInteraction } = e.data;
-        e.waitUntil(showUnique(title, { body, tag: tag || 'bc-notif', requireInteraction: requireInteraction || false, data: { url: APP_URL } }));
+        const { title, body, tag, requireInteraction, icon } = e.data;
+        e.waitUntil(showUnique(title, { body, tag: tag || 'bc-notif', requireInteraction: requireInteraction || false, icon: icon || ICON, data: { url: APP_URL } }));
     }
 });
 

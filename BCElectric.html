@@ -3880,6 +3880,15 @@ Object.assign(DT, {
 "cf_dash": ["فتح لوحة Cloudinary", "Open Cloudinary dashboard", "Ouvrir le tableau de bord Cloudinary"],
 "cf_local": ["{n} ملف ما زال مخزّناً داخل قاعدة البيانات — استخدم «نقل الملفات القديمة»", "{n} files are still stored inside the database — use “Move old files”", "{n} fichiers sont encore stockés dans la base — utilisez « Déplacer les anciens fichiers »"]
 });
+Object.assign(DT, {
+"cf_c_del": ["سيُحذف هذا الملف نهائياً من المحادثة ومن Cloudinary. متابعة؟", "This file will be permanently deleted from the chat and from Cloudinary. Continue?", "Ce fichier sera supprimé définitivement de la discussion et de Cloudinary. Continuer ?"],
+"cf_c_old": ["سيُحذف {n} ملف نهائياً من المحادثات ومن Cloudinary. متابعة؟", "{n} files will be permanently deleted from chats and from Cloudinary. Continue?", "{n} fichiers seront supprimés définitivement des discussions et de Cloudinary. Continuer ?"],
+"cf_note": ["الحذف نهائي: يُزال الملف من المحادثة ومن حسابك على Cloudinary معاً (عبر الـ Worker).", "Deletion is permanent: the file is removed from the chat and from your Cloudinary account (via the Worker).", "La suppression est définitive : le fichier est retiré de la discussion et de votre compte Cloudinary (via le Worker)."],
+"cf_fail": ["تعذر الحذف من Cloudinary: {e}", "Could not delete from Cloudinary: {e}", "Échec de la suppression sur Cloudinary : {e}"],
+"cf_app_only": ["هل تحذفه من المحادثات فقط (يبقى في Cloudinary)؟", "Delete from chats only (it stays on Cloudinary)?", "Supprimer des discussions seulement (il reste sur Cloudinary) ?"],
+"cf_no_worker": ["عنوان الـ Worker غير مضبوط (إعدادات المكالمات)", "Worker URL is not set (call settings)", "L'adresse du Worker n'est pas définie (paramètres des appels)"],
+"cf_c_dash": ["فتح لوحة Cloudinary", "Open Cloudinary dashboard", "Ouvrir le tableau de bord Cloudinary"]
+});
 Object.assign(localization.ar, { set_cloud_row: 'تخزين ملفات المحادثات (Cloudinary)', set_call_row: 'إعدادات المكالمات (النغمة وخادم TURN)', set_size_row: 'تشخيص حجم البيانات' });
 Object.assign(localization.en, { set_cloud_row: 'Chat file storage (Cloudinary)', set_call_row: 'Call settings (ringtone & TURN)', set_size_row: 'Data size diagnostics' });
 Object.assign(localization.fr, { set_cloud_row: 'Stockage des fichiers (Cloudinary)', set_call_row: 'Paramètres des appels (sonnerie & TURN)', set_size_row: 'Diagnostic de la taille des données' });
@@ -4483,15 +4492,35 @@ function cfRender() {
             <button type="button" class="btn btn-danger btn-sm" onclick="cfDelete(${x.eid},'${x.m.id}')"><i class="fas fa-trash"></i></button></div>`;
     }).join('') : `<p style="text-align:center;padding:22px;color:var(--text-secondary);font-size:.8rem;">${dt('cf_none')}</p>`;
 }
-window.cfDelete = function(eid, mid) {
+// حذف مباشر من Cloudinary عبر الـ Worker (السرّ محفوظ في Cloudflare لا في التطبيق)
+async function cldDestroy(urls) {
+    urls = (urls || []).filter(u => /^https?:\/\/res\.cloudinary\.com\//.test(u || ''));
+    if (!urls.length) return { ok: true, deleted: 0 };
+    if (!_workerUrl) return { ok: false, error: dt('cf_no_worker') };
+    try {
+        const r = await fetch(_workerUrl + '/cloudinary/delete', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ urls }) });
+        const j = await r.json().catch(() => ({}));
+        return (r.ok && j.ok) ? j : { ok: false, error: j.error || ('HTTP ' + r.status) };
+    } catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+}
+window.cfDelete = async function(eid, mid) {
     if (!confirm(dt('cf_c_del'))) return;
+    const e = employees.find(x => x.id == eid), m = e && e.messages && e.messages[mid]; if (!m) return;
+    const res = await cldDestroy([m.fileData]);
+    if (!res.ok) { showToast(dt('cf_fail', { e: res.error }), 'danger'); if (!confirm(dt('cf_app_only'))) return; }
     database.ref(`employees/${eid}/messages/${mid}`).remove().then(() => { showToast(dt('cf_deleted'), 'success'); setTimeout(cfRender, 400); });
 };
-window.cfDeleteOld = function() {
+window.cfDeleteOld = async function() {
     const days = Number(document.getElementById('cfOld').value) || 90, lim = Date.now() - days * 864e5;
     const old = cloudFileList().out.filter(x => (x.m.timestamp || 0) && x.m.timestamp < lim);
     if (!old.length) { showToast(dt('cf_nothing'), 'info'); return; }
     if (!confirm(dt('cf_c_old', { n: old.length }))) return;
+    let ok = true, err = '';
+    for (let i = 0; i < old.length; i += 100) {
+        const res = await cldDestroy(old.slice(i, i + 100).map(x => x.m.fileData));
+        if (!res.ok) { ok = false; err = res.error; break; }
+    }
+    if (!ok) { showToast(dt('cf_fail', { e: err }), 'danger'); if (!confirm(dt('cf_app_only'))) return; }
     const byEmp = {}; old.forEach(x => { (byEmp[x.eid] = byEmp[x.eid] || {})[x.m.id] = null; });
     Promise.all(Object.entries(byEmp).map(([eid, up]) => database.ref(`employees/${eid}/messages`).update(up))).then(() => { showToast(dt('cf_deleted'), 'success'); setTimeout(cfRender, 500); });
 };
@@ -8246,7 +8275,7 @@ function showMessageMenu(m) {
     const dl = document.getElementById('msgMenuDel');
     if (dl) dl.onclick = () => {
         o.remove();
-        showAppDialog({icon:'<i class="fas fa-comment-slash" style="color:white;"></i>',iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',title:t('confirm_title'),msg:t('alert_delete_message_confirm'),confirmClass:'btn-danger',onConfirm:()=>{ database.ref(`employees/${currentEmpId}/messages/${m.id}`).remove(); }});
+        showAppDialog({icon:'<i class="fas fa-comment-slash" style="color:white;"></i>',iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',title:t('confirm_title'),msg:t('alert_delete_message_confirm'),confirmClass:'btn-danger',onConfirm:()=>{ database.ref(`employees/${currentEmpId}/messages/${m.id}`).remove(); if (m.fileData) cldDestroy([m.fileData]); }});
     };
 }
 
@@ -8383,7 +8412,7 @@ function sendMessage() {
     ]).then(() => { document.getElementById('chatInput').value = ''; });
 }
 // ═══ تحديث التطبيق: زر يظهر فور توفر نسخة أحدث ═══
-const APP_VERSION = '20261127-1312';   // يُغيَّر مع كل إصدار جديد من الملف
+const APP_VERSION = '20261127-1400';   // يُغيَّر مع كل إصدار جديد من الملف
 let _updShown = false;
 function showUpdateBanner() {
     if (_updShown || document.getElementById('updBanner')) return; _updShown = true;
@@ -8556,6 +8585,7 @@ function voiceBind(el) {
 }
 function clearChatHistory() {
     showAppDialog({icon:'<i class="fas fa-comment-slash" style="color:white;"></i>',iconBg:'linear-gradient(135deg,#b91c1c,var(--danger))',title:t('confirm_title'),msg:t('alert_clear_chat_confirm'),confirmClass:'btn-danger',onConfirm:()=>{
+    try { const _em = employees.find(e => e.id == currentEmpId); const _u = Object.values((_em && _em.messages) || {}).map(x => x && x.fileData).filter(Boolean); for (let i = 0; i < _u.length; i += 100) cldDestroy(_u.slice(i, i + 100)); } catch (e) {}
     database.ref(`employees/${currentEmpId}/messages`).remove().then(() => { showToast(t('alert_chat_cleared'), 'warning'); loadMessages(); });
     }});
 }
@@ -9850,7 +9880,7 @@ function requestNotifPermission() {
 //  • التطبيق مفتوح أمامك ← تنبيه داخلي صغير فقط (دون إشعار نظام)، ولا شيء إن كانت المحادثة نفسها مفتوحة
 //  • التطبيق في الخلفية ← إشعار نظام واحد (والـ sw.js يمنع تكراره مع push الـ Worker بنفس الوسم)
 const _notifSeen = new Set();
-function notifyUnique(tag, title, body, type) {
+function notifyUnique(tag, title, body, type, icon) {
     if (tag) { if (_notifSeen.has(tag)) return; _notifSeen.add(tag); if (_notifSeen.size > 200) _notifSeen.delete(_notifSeen.values().next().value); }
     if (document.visibilityState === 'visible') {
         const cm = document.getElementById('chatModal');
@@ -9858,7 +9888,7 @@ function notifyUnique(tag, title, body, type) {
         try { showToast(body, 'info', title); } catch (e) {}
         return;
     }
-    _doShowNotif(title, body, tag);
+    _doShowNotif(title, body, tag, false, icon);
 }
 
 function showLocalNotification(title, body, tag, requireInteraction) {
@@ -9872,7 +9902,7 @@ function showLocalNotification(title, body, tag, requireInteraction) {
     _doShowNotif(title, body, tag, requireInteraction);
 }
 
-function _doShowNotif(title, body, tag, requireInteraction) {
+function _doShowNotif(title, body, tag, requireInteraction, icon) {
     try {
         if (window._swReg && window._swReg.active) {
             // إرسال عبر Service Worker (يعمل حتى لو التطبيق في الخلفية)
@@ -9880,13 +9910,14 @@ function _doShowNotif(title, body, tag, requireInteraction) {
                 type: 'SHOW_NOTIFICATION',
                 title, body,
                 tag: tag || 'bc-notif',
+                icon: icon || '',
                 requireInteraction: requireInteraction || false
             });
         } else {
             // fallback مباشر
             new Notification(title, {
                 body,
-                icon: 'icon-192.png',
+                icon: icon || 'icon-192.png',
                 tag: tag || 'bc-notif',
                 dir: 'rtl',
                 requireInteraction: requireInteraction || false
@@ -9910,8 +9941,15 @@ function startFirebaseNotifListener() {
         const isForMe = isAdmin ? n.forAdmin : (n.forEmployee && n.employeeId === currentEmpId);
         if (!isForMe) return;
         const msg = getNotifMessage ? getNotifMessage(n) : (n.message || '');
-        const title = pushTitle(n.type);
-        notifyUnique(snap.key, title, msg, n.type);
+        let title = pushTitle(n.type), icon = '';
+        if (isAdmin && n.employeeId && ((n.type === 'new_message' && n.sender === 'employee') || n.type === 'new_request')) {
+            const ee = (typeof employees !== 'undefined' ? employees : []).find(x => String(x.id) === String(n.employeeId));
+            const nm = n.employeeName || (ee && ee.name);
+            if (nm) title = String(title).split(' ')[0] + ' ' + nm;
+            if (ee && ee.img && String(ee.img).startsWith('http')) icon = ee.img;
+            else if (_workerUrl) icon = _workerUrl.replace(/\/+$/, '') + '/avatar/' + encodeURIComponent(n.employeeId);
+        }
+        notifyUnique(snap.key, title, msg, n.type, icon);
     });
 }
 
